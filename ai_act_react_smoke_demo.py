@@ -1,20 +1,35 @@
 # -*- coding:utf-8 -*-
 """Smoke demo: aiAct ReAct loop with coordinate-based tap_at, on a local page.
 
-Run:
+配置 .env（参考 .env.example）后运行：
     ./.venv/bin/python ai_act_react_smoke_demo.py
 
 Debug artifacts (per-turn ReAct dumps, annotated screenshots) go to /tmp/dp_ai_debug.
 """
-import sys
+from os import environ
 from pathlib import Path
 from tempfile import gettempdir
 
-sys.path.insert(0, str(Path(__file__).parent))
+from DrissionPage import ChromiumPage, ChromiumOptions
 
-from ai_agent_qwen35_plus_demo import make_demo_page, prepare_dashscope_env
+from demo_env import load_dotenv
 
-prepare_dashscope_env()
+
+def prepare_env():
+    load_dotenv()
+    if not environ.get('OPENAI_API_KEY'):
+        raise RuntimeError('请先在 .env 中设置 OPENAI_API_KEY / OPENAI_BASE_URL / OPENAI_MODEL。')
+
+
+def make_demo_page():
+    download_dir = Path(gettempdir()) / 'drissionpage_ai_downloads'
+    download_dir.mkdir(parents=True, exist_ok=True)
+    opts = ChromiumOptions(read_file=False)
+    opts.set_paths(download_path=str(download_dir))
+    return ChromiumPage(opts)
+
+
+prepare_env()
 
 HTML = '''<!doctype html>
 <html lang="zh-CN">
