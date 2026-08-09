@@ -4,7 +4,7 @@
 配置 .env（参考 .env.example）后运行：
     ./.venv/bin/python ai_act_react_smoke_demo.py
 
-Debug artifacts (per-turn ReAct dumps, annotated screenshots) go to /tmp/dp_ai_debug.
+Debug artifacts (per-turn ReAct dumps, annotated screenshots) go to ./debug_log.
 """
 from os import environ
 from pathlib import Path
@@ -13,6 +13,8 @@ from tempfile import gettempdir
 from DrissionPage import ChromiumPage, ChromiumOptions
 
 from demo_env import load_dotenv
+
+DEBUG_DIR = str(Path(__file__).parent / 'debug_log')
 
 
 def prepare_env():
@@ -69,7 +71,7 @@ try:
     page.wait.doc_loaded()
     result = page.agent.aiAct(
         '点击"立即登录并继续"按钮打开登录面板，然后在账号输入框输入 demo_user',
-        options={'max_turns': 8, 'debug': True, 'debug_dir': '/tmp/dp_ai_debug', 'force_replan': True},
+        options={'max_turns': 8, 'debug': True, 'debug_dir': DEBUG_DIR, 'force_replan': True},
     )
     print('yaml_flow:', result['yaml_flow'])
     print('final_output:', result['final_output'])

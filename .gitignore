@@ -122,3 +122,6 @@ dmypy.json
 
 # Personal files
 /code2.jpg
+
+# Demo debug artifacts
+debug_log/

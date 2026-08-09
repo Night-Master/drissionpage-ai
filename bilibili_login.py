@@ -3,7 +3,7 @@
 DrissionPage AI demo（kimi k3）。
 
 配置 .env（参考 .env.example）后运行：
-    python3 bilibili_demo-kimi.py
+    python3 bilibili_login.py
 """
 from os import environ
 from pathlib import Path
@@ -27,6 +27,9 @@ def prepare_kimi_env():
 
 
 
+DEBUG_DIR = str(Path(__file__).parent / 'debug_log')
+
+
 def make_demo_page():
     download_dir = Path(gettempdir()) / 'drissionpage_ai_downloads'
     download_dir.mkdir(parents=True, exist_ok=True)
@@ -48,7 +51,7 @@ def main():
       '点击登录',
       options={
           'debug': True,
-          'debug_dir': '/tmp/dp_ai_debug',
+          'debug_dir': DEBUG_DIR,
       }
   )
         time.sleep(2)
@@ -57,7 +60,7 @@ def main():
       options={
           'value': environ.get('DEMO_PHONE', ''),
           'debug': True,
-          'debug_dir': '/tmp/dp_ai_debug',
+          'debug_dir': DEBUG_DIR,
       }
   )
         time.sleep(2)
@@ -66,7 +69,7 @@ def main():
       options={
           'value': environ.get('DEMO_PHONE', ''),
           'debug': True,
-          'debug_dir': '/tmp/dp_ai_debug',
+          'debug_dir': DEBUG_DIR,
       }
   )
         r = page.agent.aiTap(
@@ -74,7 +77,7 @@ def main():
       options={
           'value': environ.get('DEMO_PHONE', ''),
           'debug': True,
-          'debug_dir': '/tmp/dp_ai_debug',
+          'debug_dir': DEBUG_DIR,
       }
   )
         time.sleep(4)
@@ -84,7 +87,7 @@ def main():
             options={
                 'value': environ.get('DEMO_PHONE', ''),
                 'debug': True,
-                'debug_dir': '/tmp/dp_ai_debug',
+                'debug_dir': DEBUG_DIR,
             }
         )  
 

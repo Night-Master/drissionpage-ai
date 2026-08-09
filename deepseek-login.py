@@ -3,7 +3,7 @@
 DrissionPage AI demo（DashScope qwen）。
 
 配置 .env（参考 .env.example）后运行：
-    python3 ai_agent_doubao_seed_2_0_pro_demo.py
+    python3 deepseek-login.py
 """
 from os import environ
 from pathlib import Path
@@ -19,6 +19,9 @@ def prepare_qwen_env():
     load_dotenv()
     if not environ.get('OPENAI_API_KEY'):
         raise RuntimeError('请先在 .env 中设置 OPENAI_API_KEY / OPENAI_BASE_URL / OPENAI_MODEL。')
+
+
+DEBUG_DIR = str(Path(__file__).parent / 'debug_log')
 
 
 def make_demo_page():
@@ -41,7 +44,7 @@ def main():
             options={
                 'value': environ.get('DEMO_PHONE', ''),
                 'debug': True,
-                'debug_dir': r'C:\Users\11985\Documents\drissionpage-ai\log'
+                'debug_dir': DEBUG_DIR
             })
 
         page.agent.aiInput('账号输入框', {'value': environ.get('DEMO_PHONE', '')})
@@ -49,7 +52,7 @@ def main():
             options={
                 'value': environ.get('DEMO_PHONE', ''),
                 'debug': True,
-                'debug_dir': r'C:\Users\11985\Documents\drissionpage-ai\log'
+                'debug_dir': DEBUG_DIR
             })
 
         for i in range(10):
@@ -58,7 +61,7 @@ def main():
             options={
                 'value': environ.get('DEMO_PHONE', ''),
                 'debug': True,
-                'debug_dir': r'C:\Users\11985\Documents\drissionpage-ai\log'
+                'debug_dir': DEBUG_DIR,
             }
         )  
 
