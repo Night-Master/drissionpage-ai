@@ -51,7 +51,7 @@ class AIPlanner(object):
                 'aiAct requires model configuration. Set OPENAI_API_KEY/BASE_URL/MODEL.'
             )
 
-        from agents import Agent, ModelSettings, OpenAIChatCompletionsModel, Runner, set_tracing_disabled
+        from agents import Agent, ModelSettings, Runner, set_tracing_disabled
         from agents.exceptions import MaxTurnsExceeded
 
         set_tracing_disabled(True)
@@ -68,7 +68,8 @@ class AIPlanner(object):
         react_agent = Agent(
             name='drissionpage-ai-act',
             instructions=self._instructions(),
-            model=OpenAIChatCompletionsModel(model=self._model.model, openai_client=self._get_sdk_client()),
+            model=_vision_chat_completions_model_class()(model=self._model.model,
+                                                         openai_client=self._get_sdk_client()),
             model_settings=ModelSettings(temperature=self._model.temperature,
                                          max_tokens=self._model.max_tokens),
             tools=self._build_tools(yaml_flow, all_results, options),
@@ -115,7 +116,8 @@ class AIPlanner(object):
             'Work in a ReAct loop:\n'
             '1. Observe the latest screenshot.\n'
             '2. Decide the next single action and call the matching tool.\n'
-            '3. Every tool call returns the newest screenshot. Re-observe it and continue.\n\n'
+            '3. After each tool call you receive the newest screenshot as a new image message. '
+            'Re-observe it and continue.\n\n'
             'Rules:\n'
             '- To click anything, call tap_at with the bounding box you read directly from the '
             'screenshot, in 0-{size} coordinates (every screenshot is a {size}x{size} square '
@@ -482,3 +484,57 @@ def _jsonable(value):
 def _safe_name(text, limit=30):
     text = sub(r'[^0-9a-zA-Z一-鿿_-]+', '_', str(text or '')).strip('_')
     return text[:limit]
+
+
+_VISION_MODEL_CLASS = None
+
+
+def _vision_chat_completions_model_class():
+    """Return an OpenAIChatCompletionsModel subclass that keeps screenshots visible.
+
+    Chat Completions tool messages cannot carry images: the Agents SDK silently
+    drops ToolOutputImage content when converting items for that API. To keep the
+    ReAct loop as "act -> observe -> act", images inside function_call_output
+    items are hoisted into a user message right after the tool output.
+    """
+    global _VISION_MODEL_CLASS
+    if _VISION_MODEL_CLASS is None:
+        from agents import OpenAIChatCompletionsModel
+
+        class VisionChatCompletionsModel(OpenAIChatCompletionsModel):
+            async def get_response(self, system_instructions, input, model_settings, tools,
+                                   output_schema, handoffs, tracing, previous_response_id=None,
+                                   conversation_id=None, prompt=None):
+                return await super().get_response(
+                    system_instructions, _hoist_tool_output_images(input), model_settings,
+                    tools, output_schema, handoffs, tracing,
+                    previous_response_id=previous_response_id,
+                    conversation_id=conversation_id, prompt=prompt)
+
+        _VISION_MODEL_CLASS = VisionChatCompletionsModel
+    return _VISION_MODEL_CLASS
+
+
+def _hoist_tool_output_images(input):
+    if isinstance(input, str):
+        return input
+    items = []
+    for item in input:
+        output = item.get('output') if isinstance(item, dict) else None
+        if isinstance(item, dict) and item.get('type') == 'function_call_output' \
+                and isinstance(output, list):
+            images = [part for part in output
+                      if isinstance(part, dict) and part.get('type') == 'input_image']
+            if images:
+                rest = [part for part in output
+                        if not (isinstance(part, dict) and part.get('type') == 'input_image')]
+                item = dict(item, output=rest or [{'type': 'input_text', 'text': 'Action executed.'}])
+                items.append(item)
+                items.append({
+                    'role': 'user',
+                    'content': [{'type': 'input_text',
+                                 'text': 'Latest screenshot after the previous action:'}] + images,
+                })
+                continue
+        items.append(item)
+    return items
