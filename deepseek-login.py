@@ -37,10 +37,20 @@ def main():
         page.get('https://chat.deepseek.com/sign_in')
         page.set.window.max()
         page.wait.doc_loaded()
-
+        page.agent.aiTap('点击登录',
+            options={
+                'value': environ.get('DEMO_PHONE', ''),
+                'debug': True,
+                'debug_dir': r'C:\Users\11985\Documents\drissionpage-ai\log'
+            })
 
         page.agent.aiInput('账号输入框', {'value': environ.get('DEMO_PHONE', '')})
-        page.agent.aiTap('发送短信验证码')
+        page.agent.aiTap('发送短信验证码',
+            options={
+                'value': environ.get('DEMO_PHONE', ''),
+                'debug': True,
+                'debug_dir': r'C:\Users\11985\Documents\drissionpage-ai\log'
+            })
 
         for i in range(10):
                 r = page.agent.aiAct(
@@ -48,7 +58,7 @@ def main():
             options={
                 'value': environ.get('DEMO_PHONE', ''),
                 'debug': True,
-                'debug_dir': '/tmp/dp_ai_debug',
+                'debug_dir': r'C:\Users\11985\Documents\drissionpage-ai\log'
             }
         )  
 

@@ -14,7 +14,7 @@ from typing import Optional
 from .context import build_context, normalize_screenshot_to_css_pixels
 from .locator import _interpret_model_bbox
 
-DEFAULT_MAX_TURNS = 20
+DEFAULT_MAX_TURNS = 40
 REACT_IMAGE_SIZE = 1000
 
 
