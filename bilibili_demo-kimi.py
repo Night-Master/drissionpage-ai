@@ -1,14 +1,9 @@
 # -*- coding:utf-8 -*-
 """
-DrissionPage AI demo for DashScope qwen3.5-plus.
+DrissionPage AI demo（kimi k3）。
 
-Run:
-    export DASHSCOPE_API_KEY='sk-xxx'
-    python3 demos/ai_agent_qwen35_plus_demo.py
-
-Official DashScope OpenAI-compatible docs:
-https://help.aliyun.com/zh/model-studio/compatibility-of-openai-with-dashscope
-https://help.aliyun.com/zh/model-studio/vision
+配置 .env（参考 .env.example）后运行：
+    python3 bilibili_demo-kimi.py
 """
 from os import environ
 from pathlib import Path
@@ -24,14 +19,10 @@ import os
 
 def prepare_kimi_env():
     load_dotenv()
-    environ.setdefault('OPENAI_API_KEY', environ.get('KIMI_API_KEY', ''))
-    environ.setdefault('OPENAI_BASE_URL',
-                       environ.get('KIMI_BASE_URL', 'https://api.kimi.com/coding/v1'))
-    environ.setdefault('OPENAI_MODEL', environ.get('KIMI_MODEL', 'k3'))
     # kimi k3 只接受 temperature=1，库默认是 0，会被 400 拒绝
     environ.setdefault('DP_AI_TEMPERATURE', '1')
     if not environ.get('OPENAI_API_KEY'):
-        raise RuntimeError('请先设置 KIMI_API_KEY 或 OPENAI_API_KEY。')
+        raise RuntimeError('请先在 .env 中设置 OPENAI_API_KEY / OPENAI_BASE_URL / OPENAI_MODEL。')
 
 
 

@@ -1,10 +1,9 @@
 # -*- coding:utf-8 -*-
 """
-DrissionPage AI demo for DashScope qwen.
+DrissionPage AI demo（DashScope qwen）。
 
-Run:
-    export DASHSCOPE_API_KEY='your-key'
-    /usr/bin/python3 ai_agent_doubao_seed_2_0_pro_demo.py
+配置 .env（参考 .env.example）后运行：
+    python3 ai_agent_doubao_seed_2_0_pro_demo.py
 """
 from os import environ
 from pathlib import Path
@@ -18,12 +17,8 @@ import os
 
 def prepare_qwen_env():
     load_dotenv()
-    environ.setdefault('OPENAI_API_KEY', environ.get('DASHSCOPE_API_KEY', ''))
-    environ.setdefault('OPENAI_BASE_URL',
-                       environ.get('DASHSCOPE_BASE_URL', 'https://dashscope.aliyuncs.com/compatible-mode/v1'))
-    environ.setdefault('OPENAI_MODEL', 'qwen3.8-max')
     if not environ.get('OPENAI_API_KEY'):
-        raise RuntimeError('请先设置 DASHSCOPE_API_KEY 或 OPENAI_API_KEY。')
+        raise RuntimeError('请先在 .env 中设置 OPENAI_API_KEY / OPENAI_BASE_URL / OPENAI_MODEL。')
 
 
 def make_demo_page():
