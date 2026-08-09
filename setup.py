@@ -20,7 +20,7 @@ setup(
     name="drissionpage-ai",
     version=read_version(),
     author="Night-Master",
-    author_email="you@example.com",  # TODO: 改成你的邮箱
+    author_email="Night-Master@users.noreply.github.com",
     description="AI-powered web automation based on DrissionPage: locate, extract and act with natural language.",
     long_description=long_description,
     long_description_content_type="text/markdown",
