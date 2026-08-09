@@ -99,10 +99,11 @@ class AILocator(object):
         if not bbox_candidates:
             return None, result.get('reason') or _join_errors(result.get('errors')), None
         viewport_bbox = bbox_candidates[0]
-        center_viewport = _bbox_center(viewport_bbox)
+        css_viewport_bbox = _scale_bbox(viewport_bbox, context.get('screenshot_model_scale'))
+        center_viewport = _bbox_center(css_viewport_bbox)
         center_page = self._adapter.viewport_to_page_point(center_viewport['x'], center_viewport['y'],
                                                            metrics=context['metrics'])
-        rect_page = _viewport_bbox_to_page_bbox(viewport_bbox, context['metrics'].get('scroll_position', {}))
+        rect_page = _viewport_bbox_to_page_bbox(css_viewport_bbox, context['metrics'].get('scroll_position', {}))
         _, point_item = self._adapter.element_at_page_point(center_page['x'], center_page['y'])
         item = {
             'xpath': point_item.get('xpath') if point_item else None,
@@ -144,6 +145,8 @@ class AILocator(object):
             'scroll_position': context['metrics'].get('scroll_position', {}),
             'screenshot_size': context.get('screenshot_size', {}),
             'screenshot_actual_size': context.get('screenshot_actual_size', {}),
+            'screenshot_css_size': context.get('screenshot_css_size', {}),
+            'screenshot_model_scale': context.get('screenshot_model_scale'),
             'screenshot_css_source': context.get('screenshot_css_source'),
         }
         with open(meta_path, 'w', encoding='utf-8') as f:
@@ -176,16 +179,21 @@ class AILocator(object):
         if viewport_bbox:
             draw.rectangle(_scale_rect(_bbox_to_draw_rect(viewport_bbox, context.get('screenshot_size', {}))),
                            outline=(59, 130, 246, 255), width=line_width)
+        css_ref = context.get('screenshot_css_size') or css_size
+        model_scale = context.get('screenshot_model_scale') or {}
+        inv_x = 1.0 / (model_scale.get('x') or 1.0)
+        inv_y = 1.0 / (model_scale.get('y') or 1.0)
         rect = _page_rect_to_screenshot_rect(item.get('rect_page') or {},
                                              context['metrics'].get('scroll_position', {}),
-                                             context.get('screenshot_size', {}))
+                                             css_ref)
         if rect:
+            rect = (rect[0] * inv_x, rect[1] * inv_y, rect[2] * inv_x, rect[3] * inv_y)
             draw.rectangle(_scale_rect(rect), outline=(235, 64, 52, 255), width=line_width)
             cross_x, cross_y = _page_point_to_screenshot_point(item.get('center_page') or {},
                                                                context['metrics'].get('scroll_position', {}),
-                                                               context.get('screenshot_size', {}))
-            cross_x = int(round(cross_x * scale_x))
-            cross_y = int(round(cross_y * scale_y))
+                                                               css_ref)
+            cross_x = int(round(cross_x * inv_x * scale_x))
+            cross_y = int(round(cross_y * inv_y * scale_y))
             draw.line((cross_x - cross_r, cross_y, cross_x + cross_r, cross_y), fill=(235, 64, 52, 255), width=line_width)
             draw.line((cross_x, cross_y - cross_r, cross_x, cross_y + cross_r), fill=(235, 64, 52, 255), width=line_width)
         image.save(annotated_path, format='PNG')
@@ -333,6 +341,21 @@ def _bbox_center(viewport_bbox):
     return {
         'x': int(round((viewport_bbox['left'] + viewport_bbox['right']) / 2.0)),
         'y': int(round((viewport_bbox['top'] + viewport_bbox['bottom']) / 2.0)),
+    }
+
+
+def _scale_bbox(viewport_bbox, model_scale):
+    """Map a bbox in model-image coordinates back to CSS viewport coordinates."""
+    model_scale = model_scale or {}
+    scale_x = model_scale.get('x') or 1.0
+    scale_y = model_scale.get('y') or 1.0
+    if scale_x == 1.0 and scale_y == 1.0:
+        return viewport_bbox
+    return {
+        'left': int(round(viewport_bbox['left'] * scale_x)),
+        'top': int(round(viewport_bbox['top'] * scale_y)),
+        'right': int(round(viewport_bbox['right'] * scale_x)),
+        'bottom': int(round(viewport_bbox['bottom'] * scale_y)),
     }
 
 
