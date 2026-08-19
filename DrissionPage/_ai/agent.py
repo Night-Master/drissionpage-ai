@@ -156,6 +156,59 @@ class DrissionPageAgent(object):
         self.recordToReport('aiTapAt', payload)
         return payload
 
+    def aiDragAt(self, source_bbox, target_bbox, coord_type=None, path='curve',
+                 steps=None, duration=None, options=None):
+        """Drag from source_bbox to target_bbox by model-native coordinates.
+
+        Both bboxes are [x1, y1, x2, y2] (or point [x, y]); the drag starts and ends
+        at their centers. coord_type declares the coordinate space: 'css' (absolute
+        screenshot pixels) or 'normalized' (0-1000); auto-detected when omitted.
+        path: 'linear' for a straight slide, 'curve' (default) for a bezier arc.
+        """
+        drag_options = options or {}
+        path = path or drag_options.get('path') or 'curve'
+        steps = steps or drag_options.get('steps') or 25
+        duration = duration or drag_options.get('duration') or .6
+        curve_ratio = drag_options.get('curve_ratio', .2)
+        metrics = self._adapter.get_metrics()
+        normalized = normalize_screenshot_to_css_pixels(self._adapter.screenshot_base64(), metrics)
+        source = self._interpret_drag_bbox(source_bbox, coord_type, normalized, 'source')
+        target = self._interpret_drag_bbox(target_bbox, coord_type, normalized, 'target')
+        drag_info = self._adapter.drag_points(
+            source['page'], target['page'],
+            steps=steps, duration=duration, path=path, curve_ratio=curve_ratio)
+        payload = {
+            'source_bbox': source_bbox, 'target_bbox': target_bbox,
+            'coord_type': coord_type, 'path': path,
+            'source_page': source['page'], 'target_page': target['page'],
+        }
+        if drag_options.get('debug') or drag_options.get('debug_model') or drag_options.get('debug_request'):
+            payload['debug'] = _dump_drag_at_debug(
+                source_bbox, target_bbox, coord_type, path, source, target,
+                drag_info['waypoints'], normalized, metrics, drag_options)
+        self.recordToReport('aiDragAt', payload)
+        return payload
+
+    def _interpret_drag_bbox(self, bbox, coord_type, normalized, role):
+        if isinstance(bbox, (list, tuple)) and len(bbox) == 2:
+            bbox = [bbox[0], bbox[1], bbox[0] + 1, bbox[1] + 1]
+        prefer_normalized = None
+        if isinstance(coord_type, str):
+            hint = coord_type.strip().lower()
+            if hint in ('normalized', 'normalized_1000', '1000'):
+                prefer_normalized = True
+            elif hint in ('css', 'pixel', 'pixels', 'absolute'):
+                prefer_normalized = False
+        candidates = _interpret_model_bbox({'bbox': bbox}, normalized['size'],
+                                           model_name=getattr(self._model, 'model', ''),
+                                           prefer_normalized=prefer_normalized)
+        if not candidates:
+            raise RuntimeError('aiDragAt() could not interpret {} coordinates: {}'.format(role, bbox))
+        center = _bbox_center(candidates[0])
+        point = self._adapter.viewport_to_page_point(center['x'], center['y'])
+        return {'viewport_bbox': candidates[0], 'center_viewport': center,
+                'page': (point['x'], point['y'])}
+
     def aiAsk(self, prompt, options=None):
         return self.aiString(prompt, options=options)
 
@@ -260,6 +313,15 @@ class DrissionPageAgent(object):
             return self.aiTapAt(step.get('bbox') or step.get('value'),
                                 coord_type=step.get('coord_type') or step.get('coordType'),
                                 options=merged_options)
+
+        if action == 'aiDragAt':
+            return self.aiDragAt(step.get('source_bbox') or step.get('source'),
+                                 step.get('target_bbox') or step.get('target'),
+                                 coord_type=step.get('coord_type') or step.get('coordType'),
+                                 path=step.get('path'),
+                                 steps=step.get('steps'),
+                                 duration=step.get('duration'),
+                                 options=merged_options)
 
         if action == 'aiInput':
             target = step.get('target') or step.get('locate')
@@ -390,6 +452,75 @@ def _dump_tap_at_debug(bbox, coord_type, viewport_bbox, center, point, normalize
               fill=(235, 64, 52, 255), width=line_width)
     draw.line((cross_x, cross_y - cross_r, cross_x, cross_y + cross_r),
               fill=(235, 64, 52, 255), width=line_width)
+    image.save(annotated_path, format='PNG')
+    debug['annotated_screenshot_path'] = str(annotated_path)
+    return debug
+
+
+def _dump_drag_at_debug(source_bbox, target_bbox, coord_type, path, source, target,
+                        waypoints, normalized, metrics, options):
+    """Dump the screenshot used for aiDragAt coordinate conversion, plus an annotated
+    copy showing source/target bboxes (blue/green) and the executed trajectory."""
+    save_dir = Path(options.get('debug_dir') or (Path(gettempdir()) / 'drissionpage_ai_locate_debug'))
+    save_dir.mkdir(parents=True, exist_ok=True)
+    stem = 'drag_at_{}'.format(strftime('%Y%m%d_%H%M%S'))
+    raw_path = save_dir / '{}_raw.png'.format(stem)
+    annotated_path = save_dir / '{}_annotated.png'.format(stem)
+    meta_path = save_dir / '{}_meta.json'.format(stem)
+
+    image_bytes = b64decode(normalized['base64'])
+    raw_path.write_bytes(image_bytes)
+    meta_path.write_text(dumps({
+        'source_bbox_input': source_bbox,
+        'target_bbox_input': target_bbox,
+        'coord_type': coord_type,
+        'path': path,
+        'source_viewport_bbox_interpreted': source['viewport_bbox'],
+        'target_viewport_bbox_interpreted': target['viewport_bbox'],
+        'source_center_viewport': source['center_viewport'],
+        'target_center_viewport': target['center_viewport'],
+        'source_page': source['page'],
+        'target_page': target['page'],
+        'waypoints_viewport': waypoints,
+        'screenshot_size': normalized.get('size'),
+        'screenshot_actual_size': normalized.get('actual_size'),
+        'screenshot_normalized': normalized.get('normalized'),
+        'scroll_position': metrics.get('scroll_position', {}),
+    }, ensure_ascii=False, indent=2, default=list), encoding='utf-8')
+
+    debug = {
+        'raw_screenshot_path': str(raw_path),
+        'annotated_screenshot_path': None,
+        'meta_path': str(meta_path),
+    }
+
+    try:
+        from PIL import Image, ImageDraw
+    except Exception:
+        return debug
+
+    css_size = normalized.get('size') or {}
+    image = Image.open(BytesIO(image_bytes)).convert('RGBA')
+    scale_x = image.width / (css_size.get('width') or image.width)
+    scale_y = image.height / (css_size.get('height') or image.height)
+    line_width = max(2, int(round(2 * scale_x)))
+    cross_r = max(4, int(round(8 * scale_x)))
+    draw = ImageDraw.Draw(image)
+    for item, color in ((source, (59, 130, 246, 255)), (target, (34, 197, 94, 255))):
+        box = item['viewport_bbox']
+        draw.rectangle((int(round(box['left'] * scale_x)), int(round(box['top'] * scale_y)),
+                        int(round(box['right'] * scale_x)), int(round(box['bottom'] * scale_y))),
+                       outline=color, width=line_width)
+        center = item['center_viewport']
+        cross_x = int(round(center['x'] * scale_x))
+        cross_y = int(round(center['y'] * scale_y))
+        draw.line((cross_x - cross_r, cross_y, cross_x + cross_r, cross_y),
+                  fill=(235, 64, 52, 255), width=line_width)
+        draw.line((cross_x, cross_y - cross_r, cross_x, cross_y + cross_r),
+                  fill=(235, 64, 52, 255), width=line_width)
+    if waypoints and len(waypoints) > 1:
+        trail = [(int(round(x * scale_x)), int(round(y * scale_y))) for x, y in waypoints]
+        draw.line(trail, fill=(249, 115, 22, 255), width=line_width, joint='curve')
     image.save(annotated_path, format='PNG')
     debug['annotated_screenshot_path'] = str(annotated_path)
     return debug

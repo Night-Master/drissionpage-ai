@@ -2,6 +2,9 @@
 """
 Adapter from DrissionPage objects to AI helpers.
 """
+from math import hypot
+from random import uniform
+from time import sleep
 
 
 DOM_HELPERS_JS = r'''
@@ -308,6 +311,34 @@ class DrissionPageAIAdapter(object):
         self._page.actions.move_to((page_x, page_y), duration=.1)
         return self._page
 
+    def drag_points(self, from_page_xy, to_page_xy, steps=25, duration=.6, path='curve', curve_ratio=.2):
+        """Drag from one page point to another via CDP Input.dispatchMouseEvent.
+
+        path: 'linear' for a straight slide, 'curve' for a quadratic-bezier arc
+        (control point offset perpendicular to the line, random direction).
+        Returns the viewport trajectory actually used, for debugging/annotation.
+        """
+        metrics = self.get_metrics()
+        start = self.page_to_viewport_point(from_page_xy[0], from_page_xy[1], metrics=metrics)
+        end = self.page_to_viewport_point(to_page_xy[0], to_page_xy[1], metrics=metrics)
+        sx, sy = start['x'], start['y']
+        tx, ty = end['x'], end['y']
+        waypoints = [(sx, sy)] + _drag_waypoints((sx, sy), (tx, ty), steps=steps, path=path,
+                                                 curve_ratio=curve_ratio)
+        self._page.run_cdp_loaded('Input.dispatchMouseEvent', type='mouseMoved',
+                                  x=sx, y=sy, button='none', buttons=0)
+        self._page.run_cdp_loaded('Input.dispatchMouseEvent', type='mousePressed',
+                                  x=sx, y=sy, button='left', buttons=1, clickCount=1)
+        sleep(.05)
+        interval = float(duration) / max(1, int(steps))
+        for x, y in waypoints[1:]:
+            self._page.run_cdp_loaded('Input.dispatchMouseEvent', type='mouseMoved',
+                                      x=x, y=y, button='left', buttons=1)
+            sleep(interval)
+        self._page.run_cdp_loaded('Input.dispatchMouseEvent', type='mouseReleased',
+                                  x=tx, y=ty, button='left', buttons=0, clickCount=1)
+        return {'start_viewport': (sx, sy), 'end_viewport': (tx, ty), 'waypoints': waypoints}
+
     def input(self, element, value, clear=True):
         target = self.resolve_input_target(element)
         text = '' if value is None else str(value)
@@ -483,3 +514,32 @@ class DrissionPageAIAdapter(object):
             raise RuntimeError('AI features only work in WebPage d mode.')
         if getattr(self._page, '_driver', None) is None:
             raise RuntimeError('AI features require a Chromium-based page with a running driver.')
+
+
+def _drag_waypoints(from_xy, to_xy, steps=25, path='curve', curve_ratio=.2):
+    """Build drag trajectory points. 'linear' interpolates the straight line;
+    'curve' follows a quadratic bezier whose control point is offset perpendicular
+    to the line by curve_ratio * distance, in a random direction."""
+    sx, sy = from_xy
+    tx, ty = to_xy
+    dx, dy = tx - sx, ty - sy
+    dist = hypot(dx, dy) or 1.0
+    steps = max(1, int(steps))
+    control = None
+    if path == 'curve':
+        sign = 1 if uniform(0, 1) > .5 else -1
+        offset = dist * curve_ratio * sign
+        control = ((sx + tx) / 2 - dy / dist * offset, (sy + ty) / 2 + dx / dist * offset)
+    points = []
+    for i in range(1, steps + 1):
+        t = i / steps
+        t = t * t * (3 - 2 * t)  # ease-in-out, avoids a robotic constant speed
+        if control is not None:
+            u = 1 - t
+            x = u * u * sx + 2 * u * t * control[0] + t * t * tx
+            y = u * u * sy + 2 * u * t * control[1] + t * t * ty
+        else:
+            x = sx + dx * t
+            y = sy + dy * t
+        points.append((x, y))
+    return points

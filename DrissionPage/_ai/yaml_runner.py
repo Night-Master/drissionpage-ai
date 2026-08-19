@@ -89,6 +89,8 @@ class AIYamlRunner(object):
             step['timeMs'] = value
         elif action == 'aiInput':
             raise ValueError('YAML aiInput step requires mapping form with target/value.')
+        elif action == 'aiDragAt':
+            raise ValueError('YAML aiDragAt step requires mapping form with source_bbox/target_bbox.')
         elif action == 'aiKeyboardPress':
             step['keys'] = value
         elif action == 'aiScroll':

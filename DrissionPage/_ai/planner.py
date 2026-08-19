@@ -122,6 +122,8 @@ class AIPlanner(object):
             '- To click anything, call tap_at with the bounding box you read directly from the '
             'screenshot, in 0-{size} coordinates (every screenshot is a {size}x{size} square '
             'image, so the pixel coordinates you see in it are the same thing).\n'
+            '- To drag something (e.g. a slider onto its gap), call drag with the source and '
+            'target bounding boxes in the same 0-{size} coordinates.\n'
             '- To type text, call input_text with the target field description and the value.\n'
             '- If an action fails, recover and try another approach.\n'
             '- Use the same language as the user instruction in your replies.\n'
@@ -244,11 +246,20 @@ class AIPlanner(object):
             return run_step({'action': 'aiString', 'prompt': prompt})
 
         @function_tool
+        def drag(source_bbox: list, target_bbox: list, path: str = 'curve') -> list:
+            """Drag the element at source_bbox to the position of target_bbox, e.g. a
+            slider onto its gap. Both are [x1, y1, x2, y2] in the 0-1000 space of the
+            latest screenshot. path: 'curve' (human-like arc, default) or 'linear'."""
+            return run_step({'action': 'aiDragAt', 'source_bbox': source_bbox,
+                             'target_bbox': target_bbox, 'coord_type': 'normalized',
+                             'path': path})
+
+        @function_tool
         def sleep(time_ms: int) -> list:
             """Wait for the given milliseconds, e.g. while a page loads."""
             return run_step({'action': 'Sleep', 'timeMs': time_ms})
 
-        return [tap_at, input_text]
+        return [tap_at, input_text, drag]
 
     def _screenshot_data_url(self):
         metrics = self._adapter.get_metrics()
@@ -282,6 +293,13 @@ class AIPlanner(object):
             if step.get('coord_type'):
                 return {'aiTapAt': {'bbox': step.get('bbox'), 'coord_type': step.get('coord_type')}}
             return {'aiTapAt': step.get('bbox')}
+        if action == 'aiDragAt':
+            value = {'source_bbox': step.get('source_bbox'), 'target_bbox': step.get('target_bbox')}
+            if step.get('coord_type'):
+                value['coord_type'] = step.get('coord_type')
+            if step.get('path'):
+                value['path'] = step.get('path')
+            return {'aiDragAt': value}
         if action == 'aiHover':
             return {'aiHover': step.get('target')}
         if action == 'aiDoubleClick':
@@ -373,6 +391,7 @@ def _make_react_debug_hooks(prompt, options, model_name=''):
             if not image_path.exists() or not isinstance(output, list):
                 return
             bboxes = []
+            links = []
             for item in output:
                 if not isinstance(item, dict) or item.get('type') != 'function_call':
                     continue
@@ -381,9 +400,15 @@ def _make_react_debug_hooks(prompt, options, model_name=''):
                     args = loads(args) if isinstance(args, str) else args
                 except Exception:
                     continue
-                if isinstance(args, dict) and all(k in args for k in ('x1', 'y1', 'x2', 'y2')):
+                if not isinstance(args, dict):
+                    continue
+                if all(k in args for k in ('x1', 'y1', 'x2', 'y2')):
                     bboxes.append(([args['x1'], args['y1'], args['x2'], args['y2']],
-                                   args.get('coord_type')))
+                                   args.get('coord_type'), (34, 197, 94, 255)))
+                if isinstance(args.get('source_bbox'), list) and isinstance(args.get('target_bbox'), list):
+                    bboxes.append((args['source_bbox'], 'normalized', (59, 130, 246, 255)))
+                    bboxes.append((args['target_bbox'], 'normalized', (34, 197, 94, 255)))
+                    links.append((args['source_bbox'], args['target_bbox']))
             if not bboxes:
                 return
             try:
@@ -395,7 +420,8 @@ def _make_react_debug_hooks(prompt, options, model_name=''):
             line_width = max(2, image.width // 600)
             cross_r = max(4, image.width // 150)
             draw = ImageDraw.Draw(image)
-            for bbox, coord_type in bboxes:
+
+            def _to_box(bbox, coord_type):
                 prefer_normalized = None
                 if isinstance(coord_type, str):
                     hint = coord_type.strip().lower()
@@ -405,17 +431,30 @@ def _make_react_debug_hooks(prompt, options, model_name=''):
                         prefer_normalized = False
                 candidates = _interpret_model_bbox({'bbox': bbox}, size, model_name=model_name,
                                                    prefer_normalized=prefer_normalized)
-                if not candidates:
+                return candidates[0] if candidates else None
+
+            for bbox, coord_type, color in bboxes:
+                box = _to_box(bbox, coord_type)
+                if not box:
                     continue
-                box = candidates[0]
                 draw.rectangle((box['left'], box['top'], box['right'], box['bottom']),
-                               outline=(34, 197, 94, 255), width=line_width)
+                               outline=color, width=line_width)
                 cross_x = (box['left'] + box['right']) // 2
                 cross_y = (box['top'] + box['bottom']) // 2
                 draw.line((cross_x - cross_r, cross_y, cross_x + cross_r, cross_y),
                           fill=(235, 64, 52, 255), width=line_width)
                 draw.line((cross_x, cross_y - cross_r, cross_x, cross_y + cross_r),
                           fill=(235, 64, 52, 255), width=line_width)
+            for source_bbox, target_bbox in links:
+                source_box = _to_box(source_bbox, 'normalized')
+                target_box = _to_box(target_bbox, 'normalized')
+                if not source_box or not target_box:
+                    continue
+                draw.line(((source_box['left'] + source_box['right']) // 2,
+                           (source_box['top'] + source_box['bottom']) // 2,
+                           (target_box['left'] + target_box['right']) // 2,
+                           (target_box['top'] + target_box['bottom']) // 2),
+                          fill=(249, 115, 22, 255), width=line_width)
             image.save(self._dir / '{}_turn{:02d}_bbox.png'.format(self._stem, self._turn),
                        format='PNG')
 
