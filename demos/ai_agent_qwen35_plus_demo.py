@@ -14,8 +14,7 @@ from os import environ
 from pathlib import Path
 from tempfile import gettempdir
 
-from DrissionPage import Chromium, ChromiumOptions
-import drissionpage_ai
+from drissionpage_ai import Chromium, ChromiumOptions
 
 
 HTML = '''<!doctype html>

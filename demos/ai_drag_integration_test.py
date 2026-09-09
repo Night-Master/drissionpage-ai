@@ -8,7 +8,7 @@
 from sys import argv
 from time import sleep
 
-from DrissionPage import Chromium, ChromiumOptions
+from drissionpage_ai import Chromium, ChromiumOptions
 
 from demo_env import load_dotenv
 

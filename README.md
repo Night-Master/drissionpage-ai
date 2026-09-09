@@ -15,7 +15,7 @@
 pip install drissionpage-ai
 ```
 
-本包是 DrissionPage 的 AI 插件，会自动安装官方 `DrissionPage`（>=4.1.1）作为依赖，二者可以共存。`import drissionpage_ai` 后，DrissionPage 的所有页面对象（`ChromiumTab` 等）都会获得 `agent` 属性和 `ai*` 系列方法。
+本包是 DrissionPage 的 AI 插件，会自动安装官方 `DrissionPage`（>=4.1.1）作为依赖，二者可以共存。`import drissionpage_ai` 后，DrissionPage 的所有页面对象（`ChromiumTab` 等）都会获得 `agent` 属性和 `ai*` 系列方法；`Chromium`、`ChromiumOptions` 等常用类也从本包再导出，一行 import 即可开始。
 
 ## AI 模型配置
 
@@ -32,8 +32,7 @@ export OPENAI_MODEL="gpt-4o"                          # 可选，默认 gpt-4o-m
 ## 快速上手
 
 ```python
-import drissionpage_ai  # import 即为页面对象启用 ai* 方法
-from DrissionPage import Chromium
+from drissionpage_ai import Chromium  # 一个 import 同时拿到 DrissionPage 类并启用 ai* 方法
 
 tab = Chromium().latest_tab
 tab.get('https://example.com')

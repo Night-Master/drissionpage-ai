@@ -7,7 +7,7 @@
 from pathlib import Path
 from time import sleep
 
-from DrissionPage import Chromium, ChromiumOptions
+from drissionpage_ai import Chromium, ChromiumOptions
 
 from demo_env import load_dotenv
 from drag_no_square_experiment import prepare_captcha, URL

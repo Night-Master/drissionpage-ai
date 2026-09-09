@@ -10,8 +10,7 @@ from pathlib import Path
 from tempfile import gettempdir
 import time
 
-from DrissionPage import Chromium, ChromiumOptions
-import drissionpage_ai
+from drissionpage_ai import Chromium, ChromiumOptions
 
 from demo_env import load_dotenv
 

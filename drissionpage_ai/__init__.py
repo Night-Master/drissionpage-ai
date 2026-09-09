@@ -6,13 +6,22 @@ Importing this package patches DrissionPage's ChromiumBase with an `agent`
 property and ai* shortcut methods. All page-like objects (ChromiumTab,
 ChromiumPage, MixTab, WebPage, ChromiumFrame) inherit from ChromiumBase,
 so one patch covers every object users get from a Chromium browser.
+
+Common DrissionPage entry points (Chromium, ChromiumOptions, SessionOptions)
+are re-exported here, so a single import is enough:
+
+    from drissionpage_ai import Chromium
+
+    tab = Chromium().latest_tab
+    tab.aiTap('the login button')
 """
+from DrissionPage import Chromium, ChromiumOptions, SessionOptions
 from DrissionPage._pages.chromium_base import ChromiumBase
 
 from .agent import DrissionPageAgent
 
 __version__ = '0.2.0'
-__all__ = ['DrissionPageAgent']
+__all__ = ['DrissionPageAgent', 'Chromium', 'ChromiumOptions', 'SessionOptions']
 
 _AGENT_ATTR = '_drissionpage_ai_agent'
 

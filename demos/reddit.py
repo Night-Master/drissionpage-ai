@@ -17,7 +17,7 @@ from json import dumps
 from pathlib import Path
 from time import sleep
 
-from DrissionPage import Chromium, ChromiumOptions
+from drissionpage_ai import Chromium, ChromiumOptions
 from drissionpage_ai.context import normalize_screenshot_to_css_pixels, cap_screenshot_for_model
 from drissionpage_ai.locator import _interpret_model_bbox
 from drissionpage_ai.model import OpenAICompatibleModel
