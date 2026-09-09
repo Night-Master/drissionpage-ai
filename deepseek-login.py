@@ -9,7 +9,8 @@ from os import environ
 from pathlib import Path
 from tempfile import gettempdir
 
-from DrissionPage import ChromiumOptions, ChromiumPage
+from DrissionPage import Chromium, ChromiumOptions
+import drissionpage_ai
 
 from demo_env import load_dotenv
 import os
@@ -29,7 +30,7 @@ def make_demo_page():
     download_dir.mkdir(parents=True, exist_ok=True)
     opts = ChromiumOptions(read_file=False)
     opts.set_paths(download_path=str(download_dir))
-    return ChromiumPage(opts)
+    return Chromium(opts).latest_tab
 
 
 def main():
@@ -40,17 +41,10 @@ def main():
         page.get('https://chat.deepseek.com/sign_in')
         page.set.window.max()
         page.wait.doc_loaded()
-        page.agent.aiTap('点击登录',
-            options={
-                'value': environ.get('DEMO_PHONE', ''),
-                'debug': True,
-                'debug_dir': DEBUG_DIR
-            })
 
-        page.agent.aiInput('账号输入框', {'value': environ.get('DEMO_PHONE', '')})
+        page.agent.aiInput('手机号输入框', environ.get('DEMO_PHONE', ''))
         page.agent.aiTap('发送短信验证码',
             options={
-                'value': environ.get('DEMO_PHONE', ''),
                 'debug': True,
                 'debug_dir': DEBUG_DIR
             })
@@ -59,7 +53,6 @@ def main():
                 r = page.agent.aiAct(
             '按照指引完成弹出的验证码',
             options={
-                'value': environ.get('DEMO_PHONE', ''),
                 'debug': True,
                 'debug_dir': DEBUG_DIR,
             }

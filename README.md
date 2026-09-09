@@ -15,7 +15,7 @@
 pip install drissionpage-ai
 ```
 
-注意：本包与原版 `DrissionPage` 提供同名模块，二者**不可共存**，安装前请先 `pip uninstall DrissionPage`。
+本包是 DrissionPage 的 AI 插件，会自动安装官方 `DrissionPage`（>=4.1.1）作为依赖，二者可以共存。`import drissionpage_ai` 后，DrissionPage 的所有页面对象（`ChromiumTab` 等）都会获得 `agent` 属性和 `ai*` 系列方法。
 
 ## AI 模型配置
 
@@ -27,21 +27,22 @@ export OPENAI_BASE_URL="https://api.openai.com/v1"   # 可选，使用openai兼�
 export OPENAI_MODEL="gpt-4o"                          # 可选，默认 gpt-4o-mini，建议使用具备视觉能力的模型,测试使用seed 2.1 tubor，kimi k3，qwen3.8max均可
 ```
 
-可选调优变量：`DP_AI_TIMEOUT`（默认 90）、`DP_AI_TEMPERATURE`（默认 0）、`DP_AI_MAX_TOKENS`（默认 1200）、`DP_AI_DEBUG_DIR`（AI 调试截图/日志输出目录）。
+可选调优变量：`DP_AI_TIMEOUT`（默认 90）、`DP_AI_TEMPERATURE`（默认 0）、`DP_AI_MAX_TOKENS`（默认 1200）、`DP_AI_DEBUG_DIR`（AI 调试截图/日志输出目录；未设置时默认输出到调用脚本所在目录下的 `debug_log/` 文件夹，找不到脚本文件时回退到系统临时目录）。开启 debug 后建议把 `debug_log/` 加入 `.gitignore`，避免误提交截图和请求日志。
 
 ## 快速上手
 
 ```python
-from DrissionPage import ChromiumPage
+import drissionpage_ai  # import 即为页面对象启用 ai* 方法
+from DrissionPage import Chromium
 
-page = ChromiumPage()
-page.get('https://example.com')
+tab = Chromium().latest_tab
+tab.get('https://example.com')
 
 # 自然语言点击：AI 看截图定位并点击
-page.aiAct('点击"登录"按钮，在账号输入框输入 demo_user')
+tab.aiAct('点击"登录"按钮，在账号输入框输入 demo_user')
 
 # 或者分步操作
-page.aiInput('账号输入框', 'demo_user')
+tab.aiInput('账号输入框', 'demo_user')
 ```
 
 ## 运行 demo
@@ -52,114 +53,12 @@ page.aiInput('账号输入框', 'demo_user')
 cp .env.example .env
 # 编辑 .env，填入 OPENAI_API_KEY / OPENAI_BASE_URL / OPENAI_MODEL
 # （.env.example 注释里有 qwen / kimi / seed 三个平台的参考配置）
-python bilibili_demo-qwen.py
+python bilibili_login.py
 ```
 
 demo 里的 `prepare_*_env()` 通过 `demo_env.py` 把 `.env` 加载为环境变量。`.env` 已被 gitignore，不会被提交；仓库里的 `.env.example` 是模板。
 
 ---
 
-# 以下为 DrissionPage 原版 README
+DrissionPage 本身的用法见官方文档：[https://drissionpage.cn](https://drissionpage.cn)（注意：官方自 4.1 起推荐 `Chromium().latest_tab` 写法，`ChromiumPage`/`WebPage` 将在 5.0 移除，本插件已适配新写法）。
 
----
-
-# ✨️ 概述
-
-DrissionPage 是一个基于 python 的网页自动化工具。
-
-它既能控制浏览器，也能收发数据包，还能把两者合而为一。
-
-可兼顾浏览器自动化的便利性和 requests 的高效率。
-
-它功能强大，内置无数人性化设计和便捷功能。
-
-它的语法简洁而优雅，代码量少，对新手友好。
-
-<a href="https://www.tgebrowser.com/zh" target="_blank"><img src="https://raw.githubusercontent.com/g1879/DrissionPage/refs/heads/master/img/ad.png"/></a>
-
----
-
-官方网站：[https://DrissionPage.cn](https://drissionpage.cn)
-
-项目地址：[gitee](https://gitee.com/g1879/DrissionPage)    |    [github](https://github.com/g1879/DrissionPage)     |    [gitcode](https://gitcode.com/g1879/DrissionPage) 
-
-您的星星是对我最大的支持💖
-
---- 
-
-支持系统：Windows、Linux、Mac
-
-python 版本：3.6 及以上
-
-支持浏览器：Chromium 内核浏览器(如 Chrome 和 Edge)，electron 应用
-
----
-
-# 🛠 如何使用
-
-**📖 使用文档：**  [点击查看](https://DrissionPage.cn)
-
-**交流 QQ 群：**  见使用文档
-
-![](https://drissionpage.cn/codes.png)
-
----
-
-# 💡 理念
-
-简洁而强大！
-
---- 
-
-# ☀️ 特性和亮点
-
-作者经过长期实践，踩过无数坑，总结出的经验全写到这个库里了。
-
-## 🎇 强大的自研内核
-
-本库采用全自研的内核，内置无数实用功能，对常用功能作了整合和优化，对比 selenium，有以下优点：
-
-- 不基于 webdriver
-- 无需为不同版本的浏览器下载不同的驱动
-- 运行速度更快
-- 可以跨 iframe 查找元素，无需切入切出
-- 把 iframe 看作普通元素，逻辑更清晰
-- 可同时操作多个标签页，无需切换
-- 可以直接读取浏览器缓存保存图片，无需用 GUI 点击另存
-- 可以对整个网页截图，包括视口外的部分
-- 可处理非`open`状态的 shadow-root
-
-## 🎇 亮点功能
-
-除了以上优点，本库还内置了无数人性化设计。
-
-- 极简的定位语法，查找元素更加容易
-- 集成大量常用功能，代码更优雅，功能强大稳定
-- 无处不在的等待和自动重试，使不稳定的网络变得易于控制，程序更稳定，编写更省心
-- 提供强大的下载工具，操作浏览器时也能享受快捷可靠的下载功能
-- 允许反复使用已经打开的浏览器，无需每次运行从头启动浏览器，调试方便
-- 使用 ini 文件保存常用配置，自动调用，提供便捷的设置，远离繁杂的配置项
-- 内置 lxml 作为解析引擎，解析速度成几个数量级提升
-- 使用 POM 模式封装，可直接用于测试，便于扩展
-- 高度集成的便利功能，从每个细节中体现
-- 还有很多细节，这里不一一列举，欢迎实际使用中体验：D
-
---- 
-
-# 📝 使用条款
-
-允许任何人以个人身份使用或分发本项目源代码，但仅限于学习和合法非盈利目的。
-个人或组织如未获得版权持有人授权，不得将本项目以源代码或二进制形式用于商业行为。
-
-使用本项目需满足以下条款，如使用过程中出现违反任意一项条款的情形，授权自动失效。
-- 禁止将DrissionPage应用到任何可能违反当地法律规定和道德约束的项目中
-- 禁止将DrissionPage用于任何可能有损他人利益的项目中
-- 禁止将DrissionPage用于攻击与骚扰行为
-- 遵守Robots协议，禁止将DrissionPage用于采集法律或系统Robots协议不允许的数据
-
-使用DrissionPage发生的一切行为均由使用人自行负责。
-因使用DrissionPage进行任何行为所产生的一切纠纷及后果均与版权持有人无关，
-版权持有人不承担任何使用DrissionPage带来的风险和损失。
-版权持有人不对DrissionPage可能存在的缺陷导致的任何损失负任何责任。
-
----  

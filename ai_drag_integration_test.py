@@ -8,7 +8,7 @@
 from sys import argv
 from time import sleep
 
-from DrissionPage import ChromiumPage, ChromiumOptions
+from DrissionPage import Chromium, ChromiumOptions
 
 from demo_env import load_dotenv
 
@@ -83,9 +83,9 @@ def main():
     html_path.write_text(HTML, encoding='utf-8')
     html_url = 'file://' + str(html_path)
 
-    page = ChromiumPage(ChromiumOptions(read_file=False).headless(False))
+    page = Chromium(ChromiumOptions(read_file=False).headless(False)).latest_tab
     try:
-        from DrissionPage import DrissionPageAgent
+        from drissionpage_ai import DrissionPageAgent
         agent = DrissionPageAgent(page)
 
         run_drag_at(page, agent, html_url, 'linear')

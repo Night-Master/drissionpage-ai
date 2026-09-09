@@ -13,7 +13,7 @@ from json import dumps
 from pathlib import Path
 from time import sleep, time
 
-from DrissionPage import ChromiumPage, ChromiumOptions
+from DrissionPage import Chromium, ChromiumOptions
 
 HTML = '''<!doctype html>
 <html lang="zh-CN">
@@ -206,7 +206,7 @@ def main():
     html_path.parent.mkdir(parents=True, exist_ok=True)
     html_path.write_text(HTML, encoding='utf-8')
 
-    page = ChromiumPage(ChromiumOptions(read_file=False).headless(False))
+    page = Chromium(ChromiumOptions(read_file=False).headless(False)).latest_tab
     try:
         html_url = 'file://' + str(html_path)
         _, linear_dev = run_one(page, html_url, 'linear')

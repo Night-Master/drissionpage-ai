@@ -14,7 +14,8 @@ from os import environ
 from pathlib import Path
 from tempfile import gettempdir
 
-from DrissionPage import ChromiumPage, ChromiumOptions
+from DrissionPage import Chromium, ChromiumOptions
+import drissionpage_ai
 
 
 HTML = '''<!doctype html>
@@ -196,7 +197,7 @@ def make_demo_page():
     download_dir.mkdir(parents=True, exist_ok=True)
     opts = ChromiumOptions(read_file=False)
     opts.set_paths(download_path=str(download_dir))
-    return ChromiumPage(opts)
+    return Chromium(opts).latest_tab
 
 
 def main():
@@ -229,7 +230,7 @@ def main():
         )
         print('panel opened:', opened)
 
-        page.agent.aiInput('账号输入框', {'value': 'demo_user'})
+        page.agent.aiInput('账号输入框', 'demo_user')
         page.agent.aiTap('提交登录按钮')
 
         status_text = page.agent.aiString(

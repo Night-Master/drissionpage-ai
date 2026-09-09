@@ -1,17 +1,20 @@
 # -*- coding:utf-8 -*-
 from pathlib import Path
 
-from setuptools import setup, find_packages
+from setuptools import setup
 
 BASE_DIR = Path(__file__).parent
 README_PATH = BASE_DIR / "README.md"
-VERSION_FILE = BASE_DIR / "DrissionPage" / "version.py"
+INIT_FILE = BASE_DIR / "drissionpage_ai" / "__init__.py"
 
 
 def read_version():
     namespace = {}
-    exec(VERSION_FILE.read_text(encoding="utf-8"), namespace)
-    return namespace["__version__"]
+    for line in INIT_FILE.read_text(encoding="utf-8").splitlines():
+        if line.startswith("__version__"):
+            exec(line, namespace)
+            return namespace["__version__"]
+    raise RuntimeError("Cannot find __version__ in drissionpage_ai/__init__.py")
 
 
 long_description = README_PATH.read_text(encoding="utf-8")
@@ -26,31 +29,14 @@ setup(
     long_description_content_type="text/markdown",
     keywords="DrissionPage, AI, web automation, browser, agent, LLM",
     url="https://github.com/Night-Master/drissionpage-ai",
-    include_package_data=True,
-    packages=find_packages(),
-    package_data={
-        "DrissionPage": ["*.pyi"],
-        "DrissionPage._ai": ["*.pyi"],
-        "DrissionPage._base": ["*.pyi"],
-        "DrissionPage._configs": ["*.pyi", "configs.ini"],
-        "DrissionPage._elements": ["*.pyi"],
-        "DrissionPage._functions": ["*.pyi", "suffixes.dat"],
-        "DrissionPage._pages": ["*.pyi"],
-        "DrissionPage._units": ["*.pyi"],
-    },
+    packages=["drissionpage_ai"],
     zip_safe=False,
     install_requires=[
-        'lxml',
-        'requests',
+        'DrissionPage>=4.1.1.0',
         'openai',
         'openai-agents',
         'Pillow',
-        'cssselect',
-        'DownloadKit>=2.0.7',
-        'websocket-client',
-        'click',
-        'tldextract>=3.4.4',
-        'psutil'
+        'requests',
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
@@ -62,9 +48,4 @@ setup(
         "Topic :: Software Development :: Testing",
     ],
     python_requires='>=3.10',
-    entry_points={
-        'console_scripts': [
-            'dp = DrissionPage._functions.cli:main',
-        ],
-    },
 )

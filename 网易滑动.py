@@ -1,31 +1,25 @@
 # -*- coding:utf-8 -*-
 """
-DrissionPage AI demo（kimi k3）。
+DrissionPage AI demo（DashScope qwen）。
 
 配置 .env（参考 .env.example）后运行：
-    python3 bilibili_login.py
+    python3 deepseek-login.py
 """
 from os import environ
 from pathlib import Path
 from tempfile import gettempdir
-import time
 
 from DrissionPage import Chromium, ChromiumOptions
 import drissionpage_ai
 
 from demo_env import load_dotenv
-
 import os
 
 
-def prepare_kimi_env():
+def prepare_qwen_env():
     load_dotenv()
-    # kimi k3 只接受 temperature=1，库默认是 0，会被 400 拒绝
-    environ.setdefault('DP_AI_TEMPERATURE', '1')
     if not environ.get('OPENAI_API_KEY'):
         raise RuntimeError('请先在 .env 中设置 OPENAI_API_KEY / OPENAI_BASE_URL / OPENAI_MODEL。')
-
-
 
 
 DEBUG_DIR = str(Path(__file__).parent / 'debug_log')
@@ -40,49 +34,17 @@ def make_demo_page():
 
 
 def main():
-    prepare_kimi_env()
+    prepare_qwen_env()
 
     page = make_demo_page()
     try:
-        page.get('https://www.bilibili.com')
+        page.get('https://dun.163.com/trial/jigsaw')
         page.set.window.max()
         page.wait.doc_loaded()
-
-        r = page.agent.aiTap(
-      '点击登录',
-      options={
-          'debug': True,
-          'debug_dir': DEBUG_DIR,
-      }
-  )
-        time.sleep(2)
-        r = page.agent.aiTap(
-      '手机验证码登录',
-      options={
-          'debug': True,
-          'debug_dir': DEBUG_DIR,
-      }
-  )
-        time.sleep(2)
-        r = page.agent.aiInput(
-      '手机号输入框',
-      environ.get('DEMO_PHONE', ''),
-      options={
-          'debug': True,
-          'debug_dir': DEBUG_DIR,
-      }
-  )
-        r = page.agent.aiTap(
-      '发送验证码',
-      options={
-          'debug': True,
-          'debug_dir': DEBUG_DIR,
-      }
-  )
-        time.sleep(4)
+        # page.agent.aiHover("验证码滑块")
         for i in range(10):
                 r = page.agent.aiAct(
-            '按照指引完成弹出的验证码',
+            '先点进去嵌入式验证码的菜单栏，完成普通版的嵌入式验证码，注意要拖动的是拼图而不是下方的箭头',
             options={
                 'debug': True,
                 'debug_dir': DEBUG_DIR,
@@ -90,7 +52,7 @@ def main():
         )  
 
                 opened = page.agent.aiBoolean(
-                    '是否在等待用户输入手机验证码？',
+                    '是否过了验证码',
                     options={'refresh_context': True}
                 )
                 print('通过验证码:', opened)
