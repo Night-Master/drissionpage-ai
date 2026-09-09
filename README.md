@@ -47,13 +47,13 @@ tab.aiInput('账号输入框', 'demo_user')
 
 ## 运行 demo
 
-仓库根目录附了几个真实场景 demo（B 站登录、DeepSeek 登录等）。模型配置通过 `.env` 文件提供：
+`demos/` 目录里附了几个真实场景 demo（B 站登录、DeepSeek 登录等）。模型配置通过 `.env` 文件提供：
 
 ```bash
 cp .env.example .env
 # 编辑 .env，填入 OPENAI_API_KEY / OPENAI_BASE_URL / OPENAI_MODEL
 # （.env.example 注释里有 qwen / kimi / seed 三个平台的参考配置）
-python bilibili_login.py
+python demos/bilibili_login.py
 ```
 
 demo 里的 `prepare_*_env()` 通过 `demo_env.py` 把 `.env` 加载为环境变量。`.env` 已被 gitignore，不会被提交；仓库里的 `.env.example` 是模板。
