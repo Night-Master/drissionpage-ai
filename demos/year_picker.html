@@ -29,7 +29,7 @@
   <div id="log">wheel events: <span id="wheel-count">0</span></div>
 </div>
 <script>
-  var year = 2000, MIN = 1950, MAX = 2026, wheelCount = 0;
+  var year = 2000, MIN = 1950, MAX = 2026, wheelCount = 0, wheelAcc = 0;
   var yearEl = document.getElementById('year');
   var picker = document.getElementById('picker');
   var badge = document.getElementById('hover-badge');
@@ -39,10 +39,16 @@
   picker.addEventListener('wheel', function (e) {
     e.preventDefault();
     wheelCount += 1;
-    year = Math.max(MIN, Math.min(MAX, year + Math.round(e.deltaY / 120)));
-    yearEl.textContent = year;
+    // deltaMode 1 = 行（部分鼠标），0 = 像素（触控板/大多数鼠标一格约 120px）
+    wheelAcc += e.deltaMode === 1 ? e.deltaY * 33 : e.deltaY;
+    var notches = Math.trunc(wheelAcc / 120);
+    if (notches !== 0) {
+      year = Math.max(MIN, Math.min(MAX, year + notches));
+      wheelAcc -= notches * 120;
+      yearEl.textContent = year;
+    }
     countEl.textContent = wheelCount;
-    log.innerHTML += '<br>wheel deltaY=' + Math.round(e.deltaY) + ' -> year=' + year;
+    log.innerHTML += '<br>wheel deltaY=' + Math.round(e.deltaY) + ' acc=' + Math.round(wheelAcc) + ' -> year=' + year;
     log.scrollTop = log.scrollHeight;
   }, { passive: false });
 
