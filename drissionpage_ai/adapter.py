@@ -311,6 +311,19 @@ class DrissionPageAIAdapter(object):
         self._page.actions.move_to((page_x, page_y), duration=.1)
         return self._page
 
+    def wheel_at_point(self, page_x, page_y, delta_y=300):
+        """Move the mouse to a page point and dispatch a real CDP mouse-wheel event,
+        so pages listening for 'wheel' events (pickers, custom scroll areas) react.
+        Positive delta_y scrolls down; one wheel notch is about 120."""
+        metrics = self.get_metrics()
+        point = self.page_to_viewport_point(page_x, page_y, metrics=metrics)
+        x, y = point['x'], point['y']
+        self._page.run_cdp_loaded('Input.dispatchMouseEvent', type='mouseMoved',
+                                  x=x, y=y, button='none', buttons=0)
+        self._page.run_cdp_loaded('Input.dispatchMouseEvent', type='mouseWheel',
+                                  x=x, y=y, deltaX=0, deltaY=delta_y)
+        return {'x_viewport': x, 'y_viewport': y, 'delta_y': delta_y}
+
     def drag_points(self, from_page_xy, to_page_xy, steps=25, duration=.6, path='curve', curve_ratio=.2):
         """Drag from one page point to another via CDP Input.dispatchMouseEvent.
 

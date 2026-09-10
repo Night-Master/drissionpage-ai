@@ -128,13 +128,7 @@ class DrissionPageAgent(object):
         """
         if isinstance(bbox, (list, tuple)) and len(bbox) == 2:
             bbox = [bbox[0], bbox[1], bbox[0] + 1, bbox[1] + 1]
-        prefer_normalized = None
-        if isinstance(coord_type, str):
-            hint = coord_type.strip().lower()
-            if hint in ('normalized', 'normalized_1000', '1000'):
-                prefer_normalized = True
-            elif hint in ('css', 'pixel', 'pixels', 'absolute'):
-                prefer_normalized = False
+        prefer_normalized = _prefer_normalized_hint(coord_type)
         metrics = self._adapter.get_metrics()
         normalized = normalize_screenshot_to_css_pixels(self._adapter.screenshot_base64(), metrics)
         candidates = _interpret_at_bbox(bbox, prefer_normalized, normalized,
@@ -188,13 +182,7 @@ class DrissionPageAgent(object):
     def _interpret_drag_bbox(self, bbox, coord_type, normalized, role):
         if isinstance(bbox, (list, tuple)) and len(bbox) == 2:
             bbox = [bbox[0], bbox[1], bbox[0] + 1, bbox[1] + 1]
-        prefer_normalized = None
-        if isinstance(coord_type, str):
-            hint = coord_type.strip().lower()
-            if hint in ('normalized', 'normalized_1000', '1000'):
-                prefer_normalized = True
-            elif hint in ('css', 'pixel', 'pixels', 'absolute'):
-                prefer_normalized = False
+        prefer_normalized = _prefer_normalized_hint(coord_type)
         candidates = _interpret_at_bbox(bbox, prefer_normalized, normalized,
                                         getattr(self._model, 'model', ''))
         if not candidates:
@@ -203,6 +191,27 @@ class DrissionPageAgent(object):
         point = self._adapter.viewport_to_page_point(center['x'], center['y'])
         return {'viewport_bbox': candidates[0], 'center_viewport': center,
                 'page': (point['x'], point['y'])}
+
+    def aiWheelAt(self, x, y, delta_y=300, coord_type=None, options=None):
+        """Dispatch a real mouse-wheel event at model-native coordinates.
+
+        x/y follow the same coordinate spaces as aiTapAt: 'css' (absolute screenshot
+        pixels) or 'normalized' (0-1000); auto-detected when coord_type is omitted.
+        Positive delta_y scrolls down; one wheel notch is about 120.
+        """
+        metrics = self._adapter.get_metrics()
+        normalized = normalize_screenshot_to_css_pixels(self._adapter.screenshot_base64(), metrics)
+        candidates = _interpret_at_bbox([x, y, x + 1, y + 1], _prefer_normalized_hint(coord_type),
+                                        normalized, getattr(self._model, 'model', ''))
+        if not candidates:
+            raise RuntimeError('aiWheelAt() could not interpret coordinates: {}'.format((x, y)))
+        center = _bbox_center(candidates[0])
+        point = self._adapter.viewport_to_page_point(center['x'], center['y'], metrics=metrics)
+        wheel = self._adapter.wheel_at_point(point['x'], point['y'], delta_y)
+        payload = {'x': x, 'y': y, 'delta_y': delta_y, 'coord_type': coord_type,
+                   'center_viewport': center, 'center_page': point, 'wheel': wheel}
+        self.recordToReport('aiWheelAt', payload)
+        return payload
 
     def aiAsk(self, prompt, options=None):
         return self.aiString(prompt, options=options)
@@ -322,6 +331,12 @@ class DrissionPageAgent(object):
             target = step.get('target') or step.get('locate')
             return self.aiInput(target, step.get('value'), clear=step.get('clear', True),
                                 options=merged_options)
+
+        if action == 'aiWheelAt':
+            return self.aiWheelAt(step.get('x'), step.get('y'),
+                                  delta_y=step.get('delta_y', 300),
+                                  coord_type=step.get('coord_type') or step.get('coordType'),
+                                  options=merged_options)
 
         if action == 'aiKeyboardPress':
             target = step.get('target') or step.get('locate')
@@ -532,3 +547,13 @@ def _interpret_at_bbox(bbox, prefer_normalized, normalized, model_name=''):
     candidates = _interpret_model_bbox({'bbox': bbox}, capped['size'], model_name=model_name,
                                        prefer_normalized=prefer_normalized)
     return [_scale_bbox(item, capped['model_scale']) for item in candidates]
+
+
+def _prefer_normalized_hint(coord_type):
+    if isinstance(coord_type, str):
+        hint = coord_type.strip().lower()
+        if hint in ('normalized', 'normalized_1000', '1000'):
+            return True
+        if hint in ('css', 'pixel', 'pixels', 'absolute'):
+            return False
+    return None

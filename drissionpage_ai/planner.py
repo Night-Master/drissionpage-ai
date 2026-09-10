@@ -257,11 +257,20 @@ class AIPlanner(object):
                              'path': path})
 
         @function_tool
+        def wheel_at(x: float, y: float, delta_y: float = 360) -> list:
+            """Dispatch a real mouse wheel event at point (x, y), e.g. to scroll a list,
+            picker or custom scroll area under the cursor. Coordinates use the 0-1000
+            space of the latest screenshot, which is always a 1000x1000 square image.
+            Positive delta_y scrolls down; one wheel notch is about 120."""
+            return run_step({'action': 'aiWheelAt', 'x': x, 'y': y, 'delta_y': delta_y,
+                             'coord_type': 'normalized'})
+
+        @function_tool
         def sleep(time_ms: int) -> list:
             """Wait for the given milliseconds, e.g. while a page loads."""
             return run_step({'action': 'Sleep', 'timeMs': time_ms})
 
-        return [tap_at, input_text, drag, scroll]
+        return [tap_at, input_text, drag, scroll, hover, wheel_at]
 
     def _screenshot_data_url(self):
         metrics = self._adapter.get_metrics()
@@ -312,6 +321,8 @@ class AIPlanner(object):
             return {'aiLocate': step.get('target')}
         if action == 'aiInput':
             return {'aiInput': {'target': step.get('target'), 'value': step.get('value'), 'clear': step.get('clear', True)}}
+        if action == 'aiWheelAt':
+            return {'aiWheelAt': {'x': step.get('x'), 'y': step.get('y'), 'delta_y': step.get('delta_y')}}
         if action == 'aiKeyboardPress':
             value = {'keyName': step.get('keys')}
             if step.get('target'):

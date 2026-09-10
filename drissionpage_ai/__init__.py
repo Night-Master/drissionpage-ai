@@ -20,7 +20,7 @@ from DrissionPage._pages.chromium_base import ChromiumBase
 
 from .agent import DrissionPageAgent
 
-__version__ = '0.2.0'
+__version__ = '0.2.1'
 __all__ = ['DrissionPageAgent', 'Chromium', 'ChromiumOptions', 'SessionOptions']
 
 _AGENT_ATTR = '_drissionpage_ai_agent'
@@ -78,6 +78,10 @@ def aiDragAt(self, source_bbox, target_bbox, coord_type=None, path='curve',
              steps=None, duration=None, options=None):
     return _get_agent(self).aiDragAt(source_bbox, target_bbox, coord_type=coord_type,
                                      path=path, steps=steps, duration=duration, options=options)
+
+
+def aiWheelAt(self, x, y, delta_y=300, coord_type=None, options=None):
+    return _get_agent(self).aiWheelAt(x, y, delta_y=delta_y, coord_type=coord_type, options=options)
 
 
 def aiAsk(self, prompt, options=None):
@@ -144,6 +148,7 @@ def _install():
     ChromiumBase.agent = property(_get_agent)
     for name in ('aiAct', 'ai', 'aiTap', 'aiHover', 'aiInput', 'aiKeyboardPress',
                  'aiScroll', 'aiDoubleClick', 'aiRightClick', 'aiTapAt', 'aiDragAt',
+                 'aiWheelAt',
                  'aiAsk', 'aiQuery', 'aiQueryImages', 'aiBoolean', 'aiNumber',
                  'aiString', 'aiAssert', 'aiLocate', 'aiWaitFor', 'runYaml',
                  'setAIActContext', 'evaluateJavaScript', 'recordToReport',
