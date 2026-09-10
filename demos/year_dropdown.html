@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>Year Dropdown Picker Test</title>
+<style>
+  html, body { height: 100%; margin: 0; overflow: hidden; background: #f1f5f9;
+               font-family: -apple-system, "PingFang SC", sans-serif; }
+  .wrap { display: flex; flex-direction: column; align-items: center; padding-top: 80px; }
+  #current { width: 220px; padding: 12px 16px; background: #fff; border: 1px solid #cbd5e1;
+             border-radius: 8px; font-size: 18px; color: #0f172a; cursor: pointer;
+             display: flex; justify-content: space-between; user-select: none; }
+  #current .arrow { color: #64748b; }
+  #dropdown { width: 220px; margin-top: 4px; background: #fff; border: 1px solid #cbd5e1;
+              border-radius: 8px; max-height: 210px; overflow-y: auto; box-shadow: 0 8px 24px rgba(0,0,0,.12); }
+  #dropdown[hidden] { display: none; }
+  .year-option { padding: 8px 16px; font-size: 16px; color: #334155; cursor: pointer; }
+  .year-option:hover { background: #e0f2fe; }
+  .year-option.selected { background: #bae6fd; font-weight: 700; }
+  #status { margin-top: 16px; font: 12px/1.6 monospace; color: #64748b; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="current"><span id="current-year">2000</span><span class="arrow">▾</span></div>
+  <div id="dropdown" hidden></div>
+  <div id="status">wheel events on list: <span id="wheel-count">0</span></div>
+</div>
+<script>
+  var MIN = 1950, MAX = 2026, currentYear = 2000;
+  var current = document.getElementById('current');
+  var currentYearEl = document.getElementById('current-year');
+  var dropdown = document.getElementById('dropdown');
+  var countEl = document.getElementById('wheel-count');
+  var wheelCount = 0;
+
+  for (var y = MAX; y >= MIN; y--) {
+    var opt = document.createElement('div');
+    opt.className = 'year-option' + (y === currentYear ? ' selected' : '');
+    opt.textContent = y;
+    opt.setAttribute('data-year', y);
+    dropdown.appendChild(opt);
+  }
+
+  current.addEventListener('click', function () {
+    dropdown.hidden = !dropdown.hidden;
+  });
+
+  dropdown.addEventListener('click', function (e) {
+    if (!e.target.classList.contains('year-option')) return;
+    currentYear = parseInt(e.target.getAttribute('data-year'), 10);
+    currentYearEl.textContent = currentYear;
+    var prev = dropdown.querySelector('.selected');
+    if (prev) prev.classList.remove('selected');
+    e.target.classList.add('selected');
+    dropdown.hidden = true;
+  });
+
+  dropdown.addEventListener('wheel', function (e) {
+    wheelCount += 1;
+    countEl.textContent = wheelCount;
+  }, { passive: true });
+</script>
+</body>
+</html>
