@@ -26,7 +26,7 @@ def main():
     if not environ.get('OPENAI_API_KEY'):
         raise RuntimeError('请先在 .env 中设置 OPENAI_API_KEY / OPENAI_BASE_URL / OPENAI_MODEL。')
 
-    browser = Chromium(ChromiumOptions(read_file=False).auto_port().headless())
+    browser = Chromium(ChromiumOptions(read_file=False).auto_port())
     tab = browser.latest_tab
     try:
         tab.get(PAGE_URL)

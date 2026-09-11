@@ -29,6 +29,8 @@ export OPENAI_MODEL="gpt-4o"                          # 可选，默认 gpt-4o-m
 
 可选调优变量：`DP_AI_TIMEOUT`（默认 90）、`DP_AI_TEMPERATURE`（默认 0）、`DP_AI_MAX_TOKENS`（默认 1200）、`DP_AI_DEBUG_DIR`（AI 调试截图/日志输出目录；未设置时默认输出到调用脚本所在目录下的 `debug_log/` 文件夹，找不到脚本文件时回退到系统临时目录）。开启 debug 后建议把 `debug_log/` 加入 `.gitignore`，避免误提交截图和请求日志。
 
+`aiAct` 支持执行前可视化确认模式：`options={'preview_actions': True}` 开启后，`tap_at`/`wheel_at`/`drag` 这类坐标动作不会立即执行，而是先把预期操作位置画在截图上回传给模型确认，模型验证无误后调用 `confirm_action` 才真正执行，坐标不对则可修正重发（同一动作默认最多预览调整 4 次，可用 `max_action_previews` 调整）。适合支付、提交表单等不可逆场景，代价是每次动作多一轮模型往返。
+
 ## 快速上手
 
 ```python

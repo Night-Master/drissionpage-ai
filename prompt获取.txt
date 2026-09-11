@@ -1,0 +1,88 @@
+Request URL
+https://www.aipromptreel.com/api/catalog/21st-1755/prompt
+Request Method
+GET
+Status Code
+200 OK
+Remote Address
+127.0.0.1:7890
+Referrer Policy
+no-referrer
+alt-svc
+h3=":443"; ma=2592000
+cache-control
+private, no-store
+content-encoding
+zstd
+content-length
+3852
+content-security-policy
+default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; frame-src https://preview.aipromptreel.com https://challenges.cloudflare.com; worker-src 'self' blob:; connect-src 'self' https://preview.aipromptreel.com
+content-type
+application/json; charset=utf-8
+cross-origin-resource-policy
+same-origin
+date
+Thu, 10 Sep 2026 06:10:53 GMT
+etag
+W/"39c5-BtyDcSHk1GXQOb6T5qLMJSbtCMc"
+permissions-policy
+camera=(), microphone=(), geolocation=(), payment=()
+pragma
+no-cache
+referrer-policy
+no-referrer
+strict-transport-security
+max-age=31536000; includeSubDomains; preload
+vary
+Cookie
+vary
+Accept-Encoding
+via
+1.1 Caddy
+x-content-type-options
+nosniff
+x-frame-options
+DENY
+x-robots-tag
+noindex, nofollow, noarchive, nosnippet, noimageindex
+:authority
+www.aipromptreel.com
+:method
+GET
+:path
+/api/catalog/21st-1755/prompt
+:scheme
+https
+accept
+*/*
+accept-encoding
+gzip, deflate, br, zstd
+accept-language
+zh-CN,zh;q=0.9
+cookie
+motion_device=qA37ACFMZCyUT2P_HtdZ85q7; __Host-motion_session=WbdYXLe39Et_UmdbxQnE0rqPSlqk7MzQ2_7wA-Naoj0; aipromptreel_preview_access=v1.user-56.1789020939.mr_RBeyF6oqUP8NsX0hzYV9hnwI6c0702C78hYEFmOo
+priority
+u=1, i
+sec-ch-ua
+"Not=A?Brand";v="99", "Google Chrome";v="151", "Chromium";v="151"
+sec-ch-ua-mobile
+?0
+sec-ch-ua-platform
+"macOS"
+sec-fetch-dest
+empty
+sec-fetch-mode
+cors
+sec-fetch-site
+same-origin
+user-agent
+Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36
+
+返回：
+{
+    "access": "member",
+    "dailyFreeRemaining": 3,
+    "creditBalance": 0,
+    "promptText": "You are given a task to integrate an existing React component in the codebase\r\n\r\nThe codebase should support:\r\n- shadcn project structure\r\n- Tailwind CSS\r\n- Typescript\r\n\r\nIf it doesn't, provide instructions on how to setup project via shadcn CLI, install Tailwind or Typescript.\r\n\r\nDetermine the default path for components and styles.\r\nIf default path for components is not /components/ui, provide instructions on why it's important to create this folder\r\nCopy-paste this component to /components/ui folder:\r\n```tsx\r\nScroll_media_expansion_hero.tsx\r\n'use client';\r\n\r\nimport {\r\n  useEffect,\r\n  useRef,\r\n  useState,\r\n  ReactNode,\r\n  TouchEvent,\r\n  WheelEvent,\r\n} from 'react';\r\nimport Image from 'next/image';\r\nimport { motion } from 'framer-motion';\r\n\r\ninterface ScrollExpandMediaProps {\r\n  mediaType?: 'video' | 'image';\r\n  mediaSrc: string;\r\n  posterSrc?: string;\r\n  bgImageSrc: string;\r\n  title?: string;\r\n  date?: string;\r\n  scrollToExpand?: string;\r\n  textBlend?: boolean;\r\n  children?: ReactNode;\r\n}\r\n\r\nconst ScrollExpandMedia = ({\r\n  mediaType = 'video',\r\n  mediaSrc,\r\n  posterSrc,\r\n  bgImageSrc,\r\n  title,\r\n  date,\r\n  scrollToExpand,\r\n  textBlend,\r\n  children,\r\n}: ScrollExpandMediaProps) => {\r\n  const [scrollProgress, setScrollProgress] = useState<number>(0);\r\n  const [showContent, setShowContent] = useState<boolean>(false);\r\n  const [mediaFullyExpanded, setMediaFullyExpanded] = useState<boolean>(false);\r\n  const [touchStartY, setTouchStartY] = useState<number>(0);\r\n  const [isMobileState, setIsMobileState] = useState<boolean>(false);\r\n\r\n  const sectionRef = useRef<HTMLDivElement | null>(null);\r\n\r\n  useEffect(() => {\r\n    setScrollProgress(0);\r\n    setShowContent(false);\r\n    setMediaFullyExpanded(false);\r\n  }, [mediaType]);\r\n\r\n  useEffect(() => {\r\n    const handleWheel = (e: WheelEvent) => {\r\n      if (mediaFullyExpanded && e.deltaY < 0 && window.scrollY <= 5) {\r\n        setMediaFullyExpanded(false);\r\n        e.preventDefault();\r\n      } else if (!mediaFullyExpanded) {\r\n        e.preventDefault();\r\n        const scrollDelta = e.deltaY * 0.0009;\r\n        const newProgress = Math.min(\r\n          Math.max(scrollProgress + scrollDelta, 0),\r\n          1\r\n        );\r\n        setScrollProgress(newProgress);\r\n\r\n        if (newProgress >= 1) {\r\n          setMediaFullyExpanded(true);\r\n          setShowContent(true);\r\n        } else if (newProgress < 0.75) {\r\n          setShowContent(false);\r\n        }\r\n      }\r\n    };\r\n\r\n    const handleTouchStart = (e: TouchEvent) => {\r\n      setTouchStartY(e.touches[0].clientY);\r\n    };\r\n\r\n    const handleTouchMove = (e: TouchEvent) => {\r\n      if (!touchStartY) return;\r\n\r\n      const touchY = e.touches[0].clientY;\r\n      const deltaY = touchStartY - touchY;\r\n\r\n      if (mediaFullyExpanded && deltaY < -20 && window.scrollY <= 5) {\r\n        setMediaFullyExpanded(false);\r\n        e.preventDefault();\r\n      } else if (!mediaFullyExpanded) {\r\n        e.preventDefault();\r\n        // Increase sensitivity for mobile, especially when scrolling back\r\n        const scrollFactor = deltaY < 0 ? 0.008 : 0.005; // Higher sensitivity for scrolling back\r\n        const scrollDelta = deltaY * scrollFactor;\r\n        const newProgress = Math.min(\r\n          Math.max(scrollProgress + scrollDelta, 0),\r\n          1\r\n        );\r\n        setScrollProgress(newProgress);\r\n\r\n        if (newProgress >= 1) {\r\n          setMediaFullyExpanded(true);\r\n          setShowContent(true);\r\n        } else if (newProgress < 0.75) {\r\n          setShowContent(false);\r\n        }\r\n\r\n        setTouchStartY(touchY);\r\n      }\r\n    };\r\n\r\n    const handleTouchEnd = (): void => {\r\n      setTouchStartY(0);\r\n    };\r\n\r\n    const handleScroll = (): void => {\r\n      if (!mediaFullyExpanded) {\r\n        window.scrollTo(0, 0);\r\n      }\r\n    };\r\n\r\n    window.addEventListener('wheel', handleWheel as unknown as EventListener, {\r\n      passive: false,\r\n    });\r\n    window.addEventListener('scroll', handleScroll as EventListener);\r\n    window.addEventListener(\r\n      'touchstart',\r\n      handleTouchStart as unknown as EventListener,\r\n      { passive: false }\r\n    );\r\n    window.addEventListener(\r\n      'touchmove',\r\n      handleTouchMove as unknown as EventListener,\r\n      { passive: false }\r\n    );\r\n    window.addEventListener('touchend', handleTouchEnd as EventListener);\r\n\r\n    return () => {\r\n      window.removeEventListener(\r\n        'wheel',\r\n        handleWheel as unknown as EventListener\r\n      );\r\n      window.removeEventListener('scroll', handleScroll as EventListener);\r\n      window.removeEventListener(\r\n        'touchstart',\r\n        handleTouchStart as unknown as EventListener\r\n      );\r\n      window.removeEventListener(\r\n        'touchmove',\r\n        handleTouchMove as unknown as EventListener\r\n      );\r\n      window.removeEventListener('touchend', handleTouchEnd as EventListener);\r\n    };\r\n  }, [scrollProgress, mediaFullyExpanded, touchStartY]);\r\n\r\n  useEffect(() => {\r\n    const checkIfMobile = (): void => {\r\n      setIsMobileState(window.innerWidth < 768);\r\n    };\r\n\r\n    checkIfMobile();\r\n    window.addEventListener('resize', checkIfMobile);\r\n\r\n    return () => window.removeEventListener('resize', checkIfMobile);\r\n  }, []);\r\n\r\n  const mediaWidth = 300 + scrollProgress * (isMobileState ? 650 : 1250);\r\n  const mediaHeight = 400 + scrollProgress * (isMobileState ? 200 : 400);\r\n  const textTranslateX = scrollProgress * (isMobileState ? 180 : 150);\r\n\r\n  const firstWord = title ? title.split(' ')[0] : '';\r\n  const restOfTitle = title ? title.split(' ').slice(1).join(' ') : '';\r\n\r\n  return (\r\n    <div\r\n      ref={sectionRef}\r\n      className='transition-colors duration-700 ease-in-out overflow-x-hidden'\r\n    >\r\n      <section className='relative flex flex-col items-center justify-start min-h-[100dvh]'>\r\n        <div className='relative w-full flex flex-col items-center min-h-[100dvh]'>\r\n          <motion.div\r\n            className='absolute inset-0 z-0 h-full'\r\n            initial={{ opacity: 0 }}\r\n            animate={{ opacity: 1 - scrollProgress }}\r\n            transition={{ duration: 0.1 }}\r\n          >\r\n            <Image\r\n              src={bgImageSrc}\r\n              alt='Background'\r\n              width={1920}\r\n              height={1080}\r\n              className='w-screen h-screen'\r\n              style={{\r\n                objectFit: 'cover',\r\n                objectPosition: 'center',\r\n              }}\r\n              priority\r\n            />\r\n            <div className='absolute inset-0 bg-black/10' />\r\n          </motion.div>\r\n\r\n          <div className='container mx-auto flex flex-col items-center justify-start relative z-10'>\r\n            <div className='flex flex-col items-center justify-center w-full h-[100dvh] relative'>\r\n              <div\r\n                className='absolute z-0 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 transition-none rounded-2xl'\r\n                style={{\r\n                  width: `${mediaWidth}px`,\r\n                  height: `${mediaHeight}px`,\r\n                  maxWidth: '95vw',\r\n                  maxHeight: '85vh',\r\n                  boxShadow: '0px 0px 50px rgba(0, 0, 0, 0.3)',\r\n                }}\r\n              >\r\n                {mediaType === 'video' ? (\r\n                  mediaSrc.includes('youtube.com') ? (\r\n                    <div className='relative w-full h-full pointer-events-none'>\r\n                      <iframe\r\n                        width='100%'\r\n                        height='100%'\r\n                        src={\r\n                          mediaSrc.includes('embed')\r\n                            ? mediaSrc +\r\n                              (mediaSrc.includes('?') ? '&' : '?') +\r\n                              'autoplay=1&mute=1&loop=1&controls=0&showinfo=0&rel=0&disablekb=1&modestbranding=1'\r\n                            : mediaSrc.replace('watch?v=', 'embed/') +\r\n                              '?autoplay=1&mute=1&loop=1&controls=0&showinfo=0&rel=0&disablekb=1&modestbranding=1&playlist=' +\r\n                              mediaSrc.split('v=')[1]\r\n                        }\r\n                        className='w-full h-full rounded-xl'\r\n                        frameBorder='0'\r\n                        allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'\r\n                        allowFullScreen\r\n                      />\r\n                      <div\r\n                        className='absolute inset-0 z-10'\r\n                        style={{ pointerEvents: 'none' }}\r\n                      ></div>\r\n\r\n                      <motion.div\r\n                        className='absolute inset-0 bg-black/30 rounded-xl'\r\n                        initial={{ opacity: 0.7 }}\r\n                        animate={{ opacity: 0.5 - scrollProgress * 0.3 }}\r\n                        transition={{ duration: 0.2 }}\r\n                      />\r\n                    </div>\r\n                  ) : (\r\n                    <div className='relative w-full h-full pointer-events-none'>\r\n                      <video\r\n                        src={mediaSrc}\r\n                        poster={posterSrc}\r\n                        autoPlay\r\n                        muted\r\n                        loop\r\n                        playsInline\r\n                        preload='auto'\r\n                        className='w-full h-full object-cover rounded-xl'\r\n                        controls={false}\r\n                        disablePictureInPicture\r\n                        disableRemotePlayback\r\n                      />\r\n                      <div\r\n                        className='absolute inset-0 z-10'\r\n                        style={{ pointerEvents: 'none' }}\r\n                      ></div>\r\n\r\n                      <motion.div\r\n                        className='absolute inset-0 bg-black/30 rounded-xl'\r\n                        initial={{ opacity: 0.7 }}\r\n                        animate={{ opacity: 0.5 - scrollProgress * 0.3 }}\r\n                        transition={{ duration: 0.2 }}\r\n                      />\r\n                    </div>\r\n                  )\r\n                ) : (\r\n                  <div className='relative w-full h-full'>\r\n                    <Image\r\n                      src={mediaSrc}\r\n                      alt={title || 'Media content'}\r\n                      width={1280}\r\n                      height={720}\r\n                      className='w-full h-full object-cover rounded-xl'\r\n                    />\r\n\r\n                    <motion.div\r\n                      className='absolute inset-0 bg-black/50 rounded-xl'\r\n                      initial={{ opacity: 0.7 }}\r\n                      animate={{ opacity: 0.7 - scrollProgress * 0.3 }}\r\n                      transition={{ duration: 0.2 }}\r\n                    />\r\n                  </div>\r\n                )}\r\n\r\n                <div className='flex flex-col items-center text-center relative z-10 mt-4 transition-none'>\r\n                  {date && (\r\n                    <p\r\n                      className='text-2xl text-blue-200'\r\n                      style={{ transform: `translateX(-${textTranslateX}vw)` }}\r\n                    >\r\n                      {date}\r\n                    </p>\r\n                  )}\r\n                  {scrollToExpand && (\r\n                    <p\r\n                      className='text-blue-200 font-medium text-center'\r\n                      style={{ transform: `translateX(${textTranslateX}vw)` }}\r\n                    >\r\n                      {scrollToExpand}\r\n                    </p>\r\n                  )}\r\n                </div>\r\n              </div>\r\n\r\n              <div\r\n                className={`flex items-center justify-center text-center gap-4 w-full relative z-10 transition-none flex-col ${\r\n                  textBlend ? 'mix-blend-difference' : 'mix-blend-normal'\r\n                }`}\r\n              >\r\n                <motion.h2\r\n                  className='text-4xl md:text-5xl lg:text-6xl font-bold text-blue-200 transition-none'\r\n                  style={{ transform: `translateX(-${textTranslateX}vw)` }}\r\n                >\r\n                  {firstWord}\r\n                </motion.h2>\r\n                <motion.h2\r\n                  className='text-4xl md:text-5xl lg:text-6xl font-bold text-center text-blue-200 transition-none'\r\n                  style={{ transform: `translateX(${textTranslateX}vw)` }}\r\n                >\r\n                  {restOfTitle}\r\n                </motion.h2>\r\n              </div>\r\n            </div>\r\n\r\n            <motion.section\r\n              className='flex flex-col w-full px-8 py-10 md:px-16 lg:py-20'\r\n              initial={{ opacity: 0 }}\r\n              animate={{ opacity: showContent ? 1 : 0 }}\r\n              transition={{ duration: 0.7 }}\r\n            >\r\n              {children}\r\n            </motion.section>\r\n          </div>\r\n        </div>\r\n      </section>\r\n    </div>\r\n  );\r\n};\r\n\r\nexport default ScrollExpandMedia;\r\n\r\n\r\n\r\n\r\n```\r\n\r\nInstall NPM dependencies:\r\n```bash\r\nframer-motion\r\n```\r\n\r\nImplementation Guidelines\r\n 1. Analyze the component structure and identify all required dependencies\r\n 2. Review the component's argumens and state\r\n 3. Identify any required context providers or hooks and install them\r\n 4. Questions to Ask\r\n - What data/props will be passed to this component?\r\n - Are there any specific state management requirements?\r\n - Are there any required assets (images, icons, etc.)?\r\n - What is the expected responsive behavior?\r\n - What is the best place to use this component in the app?\r\n\r\nSteps to integrate\r\n 0. Copy paste all the code above in the correct directories\r\n 1. Install external dependencies\r\n 2. Fill image assets with Unsplash stock images you know exist\r\n 3. Use lucide-react icons for svgs or logos if component requires them⁣⁣‌​‌​‌‌​​‌‌‌‌‌​‌​‌‌‌‌​‌​​​‌​‌​‌‌‌​​‌​‌‌‌‌​‌‌‌‌‌​‌​​‌‌‌‌‌​​‌‌‌‌‌‌​⁣"
+}

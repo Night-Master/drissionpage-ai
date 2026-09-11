@@ -31,6 +31,10 @@ class AIPlanner(object):
         cacheable = options.get('cacheable') is not False
         max_turns = int(options.get('max_turns') or options.get('replanning_cycle_limit')
                         or options.get('replan_times') or DEFAULT_MAX_TURNS)
+        if options.get('preview_actions') and not (options.get('max_turns')
+                                                   or options.get('replanning_cycle_limit')
+                                                   or options.get('replan_times')):
+            max_turns *= 2
         cache_key = self._make_cache_key(prompt)
 
         if cacheable and not options.get('force_replan') and self._cache:
@@ -67,7 +71,7 @@ class AIPlanner(object):
         all_results = []
         react_agent = Agent(
             name='drissionpage-ai-act',
-            instructions=self._instructions(),
+            instructions=self._instructions(preview_actions=bool(options.get('preview_actions'))),
             model=_vision_chat_completions_model_class()(model=self._model.model,
                                                          openai_client=self._get_sdk_client()),
             model_settings=ModelSettings(temperature=self._model.temperature,
@@ -109,7 +113,14 @@ class AIPlanner(object):
                                            timeout=self._model.timeout)
         return self._sdk_client
 
-    def _instructions(self):
+    def _instructions(self, preview_actions=False):
+        preview_rule = (
+            '- Preview mode is ON: tap_at, wheel_at and drag do NOT execute immediately. They '
+            'return the latest screenshot with your proposed action drawn on it (marked '
+            '"PREVIEW - NOT EXECUTED"). Verify the marked position, then call confirm_action to '
+            'execute it, or call the same tool again with corrected absolute coordinates. '
+            'Other tools execute immediately.\n'
+        ) if preview_actions else ''
         return (
             'You are a web automation agent controlling a real browser through tools.\n'
             'The user provides an instruction and the latest page screenshot.\n'
@@ -125,10 +136,11 @@ class AIPlanner(object):
             '- To drag something (e.g. a slider onto its gap), call drag with the source and '
             'target bounding boxes in the same 0-{size} coordinates.\n'
             '- To type text, call input_text with the target field description and the value.\n'
+            '{preview_rule}'
             '- If an action fails, recover and try another approach.\n'
             '- Use the same language as the user instruction in your replies.\n'
             '- When the instruction is fully accomplished, stop calling tools and reply with a short summary.'
-        ).format(size=REACT_IMAGE_SIZE)
+        ).format(size=REACT_IMAGE_SIZE, preview_rule=preview_rule)
 
     def _initial_input(self, prompt, context):
         text = (
@@ -167,6 +179,48 @@ class AIPlanner(object):
                                               ensure_ascii=False, default=str)),
                     ToolOutputImage(image_url=self._screenshot_data_url())]
 
+        preview_enabled = bool(options.get('preview_actions'))
+        max_previews = int(options.get('max_action_previews') or 4)
+        pending = {'step': None, 'count': 0}
+
+        def preview_step(step):
+            """Render the proposed coordinate action onto the latest screenshot and return
+            it for visual confirmation instead of executing."""
+            same_action = pending['step'] and pending['step'].get('action') == step.get('action')
+            pending['count'] = pending['count'] + 1 if same_action else 1
+            pending['step'] = step
+            if pending['count'] > max_previews:
+                pending['step'] = None
+                pending['count'] = 0
+                outputs = run_step(step)
+                outputs[0] = ToolOutputText(text=dumps({
+                    'action': step.get('action'), 'executed': True,
+                    'note': 'Preview adjustment limit ({}) reached; executed the latest '
+                            'coordinates as-is.'.format(max_previews)}, ensure_ascii=False))
+                return outputs
+            return [ToolOutputText(text=dumps({
+                        'preview': True, 'executed': False, 'action': step.get('action'),
+                        'adjustments_left': max_previews - pending['count'],
+                        'hint': 'PREVIEW ONLY - nothing was executed. The attached image is the '
+                                'latest screenshot with your proposed action drawn on it (blue '
+                                'box = target area, red cross = action point). If it is correct, '
+                                'call confirm_action to execute it; if not, call the same tool '
+                                'again with corrected absolute coordinates.'}, ensure_ascii=False)),
+                    ToolOutputImage(image_url=_preview_action_image(self._screenshot_data_url(), step))]
+
+        @function_tool
+        def confirm_action() -> list:
+            """Execute the pending previewed action. In preview mode, coordinate tools
+            (tap_at, wheel_at, drag) only return a preview image without executing; call
+            this to run the latest proposed action as-is."""
+            if not pending['step']:
+                return [ToolOutputText(text='{"error": "No pending action. Call tap_at, '
+                                            'wheel_at or drag first."}')]
+            step = pending['step']
+            pending['step'] = None
+            pending['count'] = 0
+            return run_step(step)
+
         @function_tool
         def tap(target: str) -> list:
             """Click the element described by target, e.g. 'the login button'."""
@@ -177,7 +231,8 @@ class AIPlanner(object):
             """Click the element at bounding box [x1, y1, x2, y2]. Coordinates use the 0-1000
             space of the latest screenshot, which is always a 1000x1000 square image, so the
             pixel coordinates you see in the image work identically."""
-            return run_step({'action': 'aiTapAt', 'bbox': [x1, y1, x2, y2], 'coord_type': 'normalized'})
+            step = {'action': 'aiTapAt', 'bbox': [x1, y1, x2, y2], 'coord_type': 'normalized'}
+            return preview_step(step) if preview_enabled else run_step(step)
 
         @function_tool
         def input_text(target: str, value: str, clear: bool = True) -> list:
@@ -252,9 +307,10 @@ class AIPlanner(object):
             latest screenshot, which is always a 1000x1000 square image. The drag starts
             at the center of source_bbox and ends at the center of target_bbox.
             path: 'curve' (human-like arc, default) or 'linear'."""
-            return run_step({'action': 'aiDragAt', 'source_bbox': source_bbox,
-                             'target_bbox': target_bbox, 'coord_type': 'normalized',
-                             'path': path})
+            step = {'action': 'aiDragAt', 'source_bbox': source_bbox,
+                    'target_bbox': target_bbox, 'coord_type': 'normalized',
+                    'path': path}
+            return preview_step(step) if preview_enabled else run_step(step)
 
         @function_tool
         def wheel_at(x: float, y: float, delta_y: float = 360) -> list:
@@ -262,15 +318,19 @@ class AIPlanner(object):
             picker or custom scroll area under the cursor. Coordinates use the 0-1000
             space of the latest screenshot, which is always a 1000x1000 square image.
             Positive delta_y scrolls down; one wheel notch is about 120."""
-            return run_step({'action': 'aiWheelAt', 'x': x, 'y': y, 'delta_y': delta_y,
-                             'coord_type': 'normalized'})
+            step = {'action': 'aiWheelAt', 'x': x, 'y': y, 'delta_y': delta_y,
+                    'coord_type': 'normalized'}
+            return preview_step(step) if preview_enabled else run_step(step)
 
         @function_tool
         def sleep(time_ms: int) -> list:
             """Wait for the given milliseconds, e.g. while a page loads."""
             return run_step({'action': 'Sleep', 'timeMs': time_ms})
 
-        return [tap_at, input_text, drag, scroll, hover, wheel_at]
+        tools = [tap_at, input_text, drag, scroll, hover, wheel_at]
+        if preview_enabled:
+            tools.append(confirm_action)
+        return tools
 
     def _screenshot_data_url(self):
         metrics = self._adapter.get_metrics()
@@ -495,6 +555,67 @@ def _square_screenshot_data_url(screenshot_base64, image_format='png'):
         return 'data:image/jpeg;base64,{}'.format(b64encode(buf.getvalue()).decode('ascii'))
     except Exception:
         return 'data:image/{};base64,{}'.format(image_format, screenshot_base64)
+
+
+def _preview_action_image(square_data_url, step):
+    """Draw a pending coordinate action onto the model-facing square screenshot.
+
+    Step coordinates are already in the screenshot's own 0-REACT_IMAGE_SIZE space,
+    so no coordinate conversion is needed. Falls back to the raw screenshot when
+    PIL is unavailable or decoding fails.
+    """
+    try:
+        from PIL import Image, ImageDraw
+    except Exception:
+        return square_data_url
+    try:
+        image = Image.open(BytesIO(b64decode(square_data_url.split(',', 1)[-1]))).convert('RGB')
+    except Exception:
+        return square_data_url
+
+    scale = image.width / float(REACT_IMAGE_SIZE)
+    draw = ImageDraw.Draw(image)
+    blue, red, green, orange = (59, 130, 246), (235, 64, 52), (34, 197, 94), (249, 115, 22)
+    lw = max(2, int(round(2 * scale)))
+    action = step.get('action')
+
+    def box(bbox, color):
+        x1, y1, x2, y2 = [int(round(v * scale)) for v in bbox]
+        draw.rectangle((x1, y1, x2, y2), outline=color, width=lw)
+        return (x1 + x2) // 2, (y1 + y2) // 2
+
+    def cross(cx, cy, color):
+        r = max(6, int(round(10 * scale)))
+        draw.line((cx - r, cy, cx + r, cy), fill=color, width=lw)
+        draw.line((cx, cy - r, cx, cy + r), fill=color, width=lw)
+
+    if action == 'aiTapAt':
+        bbox = step.get('bbox') or [step.get('x'), step.get('y'), step.get('x'), step.get('y')]
+        cross(*box(bbox, blue), red)
+    elif action == 'aiWheelAt':
+        x, y = int(round(step.get('x') * scale)), int(round(step.get('y') * scale))
+        r = max(8, int(round(12 * scale)))
+        draw.ellipse((x - r, y - r, x + r, y + r), outline=blue, width=lw)
+        cross(x, y, red)
+        length = int(round(30 * scale))
+        sign = 1 if step.get('delta_y', 0) >= 0 else -1
+        draw.line((x, y + sign * r, x, y + sign * (r + length)), fill=orange, width=lw)
+        tip = y + sign * (r + length)
+        draw.polygon([(x - 5, tip - sign * 8), (x + 5, tip - sign * 8), (x, tip)], fill=orange)
+    elif action == 'aiDragAt':
+        s = box(step.get('source_bbox'), blue)
+        t = box(step.get('target_bbox'), green)
+        draw.line((s[0], s[1], t[0], t[1]), fill=orange, width=lw)
+        cross(*s, red)
+        cross(*t, red)
+
+    banner_h = max(20, int(round(22 * scale)))
+    draw.rectangle((0, 0, image.width, banner_h), fill=red)
+    draw.text((8, banner_h // 2 - 5), 'PREVIEW - NOT EXECUTED', fill=(255, 255, 255))
+
+    buf = BytesIO()
+    image.save(buf, format='JPEG', quality=88)
+    return 'data:image/jpeg;base64,{}'.format(b64encode(buf.getvalue()).decode('ascii'))
 
 
 def _find_last_image_url(value):
