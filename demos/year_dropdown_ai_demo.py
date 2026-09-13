@@ -27,7 +27,7 @@ def main():
     if not environ.get('OPENAI_API_KEY'):
         raise RuntimeError('请先在 .env 中设置 OPENAI_API_KEY / OPENAI_BASE_URL / OPENAI_MODEL。')
 
-    browser = Chromium(ChromiumOptions(read_file=False).auto_port().headless())
+    browser = Chromium(ChromiumOptions(read_file=False).auto_port())
     tab = browser.latest_tab
     try:
         tab.get(PAGE_URL)
@@ -35,7 +35,7 @@ def main():
             '这是一个年份选择器。点击选择框展开下拉列表，列表显示的年份范围有限，'
             '需要把鼠标悬停在下拉列表上用滚轮滚动来浏览更多年份，'
             '找到 {} 年后点击它，确认选择框最终显示 {} 后结束'.format(target, target),
-            options={'debug': True}
+            options={'debug': True,'preview_actions': True}
         )
         state = tab.run_js("""return {
             year: document.getElementById('current-year').textContent,

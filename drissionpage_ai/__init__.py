@@ -20,7 +20,7 @@ from DrissionPage._pages.chromium_base import ChromiumBase
 
 from .agent import DrissionPageAgent
 
-__version__ = '0.2.1'
+__version__ = '0.2.2'
 __all__ = ['DrissionPageAgent', 'Chromium', 'ChromiumOptions', 'SessionOptions']
 
 _AGENT_ATTR = '_drissionpage_ai_agent'

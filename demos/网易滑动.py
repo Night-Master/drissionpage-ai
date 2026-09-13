@@ -27,7 +27,7 @@ DEBUG_DIR = str(Path(__file__).parent / 'debug_log')
 def make_demo_page():
     download_dir = Path(gettempdir()) / 'drissionpage_ai_downloads'
     download_dir.mkdir(parents=True, exist_ok=True)
-    opts = ChromiumOptions(read_file=False)
+    opts = ChromiumOptions(read_file=False).auto_port()
     opts.set_paths(download_path=str(download_dir))
     return Chromium(opts).latest_tab
 
@@ -37,16 +37,16 @@ def main():
 
     page = make_demo_page()
     try:
-        page.get('https://dun.163.com/trial/jigsaw')
+        page.get('https://dun.163.com/trial/word-group')
         page.set.window.max()
         page.wait.doc_loaded()
         # page.agent.aiHover("验证码滑块")
         for i in range(10):
                 r = page.agent.aiAct(
-            '先点进去嵌入式验证码的菜单栏，完成普通版的嵌入式验证码，注意要拖动的是拼图而不是下方的箭头',
+            '先点进去嵌入式验证码的菜单栏，完成语义选词的嵌入式验证码',
             options={
-                'debug': True,
-                'debug_dir': DEBUG_DIR,
+                'debug': True
+                ,'preview_actions': True
             }
         )  
 
